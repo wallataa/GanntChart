@@ -96,6 +96,17 @@ export function isLifeLane(lane: SwimLane): boolean {
 }
 
 /**
+ * Ask before deleting a lane that still has events (deleting also cascades to
+ * its events). Empty lanes delete without a prompt.
+ */
+export function confirmDeleteLane(label: string, eventCount: number): boolean {
+  return (
+    eventCount === 0 ||
+    window.confirm(`Delete "${label}" and its ${eventCount} event(s)?`)
+  );
+}
+
+/**
  * Keep the locked Life lane pinned to the last position regardless of how the
  * other lanes are ordered. Used after any reorder.
  */

@@ -3,9 +3,9 @@
 import { useCallback, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
 import { addDays } from "date-fns";
 import type { DateRange, Event, Subtask, SwimLane, WeeklyInteraction } from "@/types";
-import { isLifeLane, pinLifeLast } from "@/lib/lanes";
 import { fromISODate, isWithinRange, placeEvent, toISODate } from "@/lib/dates";
 import { startDrag } from "@/lib/drag";
+import { DRAG_THRESHOLD, useLaneReorder } from "@/lib/useLaneReorder";
 import DateHeader from "./DateHeader";
 import WeeklyLane from "./WeeklyLane";
 
@@ -43,12 +43,11 @@ interface WeeklyViewProps {
   onDeleteLane: (id: string) => void;
 }
 
-const DRAG_THRESHOLD = 4;
-
 /**
- * Two-week day-planning surface. Owns two cross-row drags: reordering swim lanes
- * (grip on the lane header) and moving a task to a different lane (grip on the
- * task row). Subtask editing lives in TaskSubLane.
+ * Two-week day-planning surface. Lane reordering is the shared useLaneReorder
+ * hook (grip on the lane header); this component owns the task drag — moving a
+ * task to a different lane/position and rescheduling its dates. Subtask
+ * editing lives in TaskSubLane.
  */
 export default function WeeklyView({
   lanes,
@@ -79,12 +78,9 @@ export default function WeeklyView({
         (placeEvent(e.start, e.end, range) !== null ||
           subtasks.some((s) => s.taskId === e.id && isWithinRange(s.date, range))),
     );
-  // laneId -> lane group element, for pointer hit-testing.
-  const laneRefs = useRef<Map<string, HTMLElement>>(new Map());
-  const registerLane = useCallback((laneId: string, el: HTMLElement | null) => {
-    if (el) laneRefs.current.set(laneId, el);
-    else laneRefs.current.delete(laneId);
-  }, []);
+
+  const { registerLane, onLanePointerDown, orderedLanes, draggingLaneId, laneAtY } =
+    useLaneReorder(lanes, onReorderLanes);
 
   // taskId -> task row element, for reorder/move hit-testing.
   const taskRefs = useRef<Map<string, HTMLElement>>(new Map());
@@ -93,12 +89,6 @@ export default function WeeklyView({
     else taskRefs.current.delete(taskId);
   }, []);
 
-  // Lane reorder drag.
-  const [laneDragId, setLaneDragId] = useState<string | null>(null);
-  const [lanePreview, setLanePreview] = useState<string[] | null>(null);
-  const lanePreviewRef = useRef<string[] | null>(null);
-  lanePreviewRef.current = lanePreview;
-
   // Task move/reorder drag (the bar or the grip). `taskDragId` is the row being
   // dragged (for styling); `taskDrop` is the live vertical target (lane + the
   // task to insert before); `barDx` is the live horizontal offset for the bar.
@@ -106,66 +96,13 @@ export default function WeeklyView({
   const [barDx, setBarDx] = useState<{ taskId: string; px: number } | null>(null);
   const taskDropRef = useRef<{ laneId: string; beforeTaskId: string | null } | null>(null);
 
-  /** Non-Life lane whose group contains clientY. */
-  const laneAtY = (clientY: number): SwimLane | null => {
-    for (const lane of lanes) {
-      if (isLifeLane(lane)) continue;
-      const el = laneRefs.current.get(lane.id);
-      if (!el) continue;
-      const r = el.getBoundingClientRect();
-      if (clientY >= r.top && clientY <= r.bottom) return lane;
-    }
-    return null;
-  };
-
-  // ---- Lane reorder ----
-  const orderForLaneDrag = (dragId: string, clientY: number): string[] => {
-    const others = lanes.filter((l) => l.id !== dragId);
-    let insert = others.length;
-    for (let i = 0; i < others.length; i++) {
-      const el = laneRefs.current.get(others[i].id);
-      if (!el) continue;
-      const r = el.getBoundingClientRect();
-      if (clientY < r.top + r.height / 2) {
-        insert = i;
-        break;
-      }
-    }
-    const dragged = lanes.find((l) => l.id === dragId)!;
-    const next = [...others];
-    next.splice(insert, 0, dragged);
-    return pinLifeLast(next).map((l) => l.id);
-  };
-
-  const handleLanePointerDown = (laneId: string, e: ReactPointerEvent) => {
-    if (e.button !== 0) return;
-    const lane = lanes.find((l) => l.id === laneId);
-    if (!lane || isLifeLane(lane)) return;
-    startDrag(e, {
-      threshold: DRAG_THRESHOLD,
-      onActivate: () => setLaneDragId(laneId),
-      onMove: (ev) => setLanePreview(orderForLaneDrag(laneId, ev.clientY)),
-      onUp: (_ev, activated) => {
-        const order = lanePreviewRef.current;
-        if (activated && order) {
-          const from = lanes.findIndex((l) => l.id === laneId);
-          const to = order.indexOf(laneId);
-          if (from !== -1 && to !== -1 && from !== to) onReorderLanes(from, to);
-        }
-        setLaneDragId(null);
-        setLanePreview(null);
-      },
-    });
-  };
-
-  // ---- Task reorder / move between lanes (grip) ----
   // Resolve the drop target under the cursor: the (non-Life) lane and the task
   // we'd insert ahead of within it (null = append to that lane).
   const dropTargetFor = (
     dragId: string,
     clientY: number,
   ): { laneId: string; beforeTaskId: string | null } => {
-    const lane = laneAtY(clientY);
+    const lane = laneAtY(clientY)?.lane;
     const dragged = events.find((e) => e.id === dragId);
     if (!lane) return { laneId: dragged?.laneId ?? "", beforeTaskId: null };
     const laneTasks = events.filter((e) => e.laneId === lane.id && e.id !== dragId);
@@ -220,11 +157,7 @@ export default function WeeklyView({
 
   // Apply the lane-reorder preview (task moves commit on drop, no live preview),
   // then optionally drop lanes that are empty this fortnight.
-  const orderedLanes: SwimLane[] = (
-    lanePreview
-      ? (lanePreview.map((id) => lanes.find((l) => l.id === id)).filter(Boolean) as SwimLane[])
-      : lanes
-  ).filter((lane) => !hideEmptyLanes || laneHasContent(lane));
+  const visibleLanes = orderedLanes.filter((lane) => !hideEmptyLanes || laneHasContent(lane));
 
   return (
     <div className="gantt-scroll h-full overflow-auto border border-neutral-300">
@@ -237,7 +170,7 @@ export default function WeeklyView({
           sidebarLabelWidth={sidebarLabelWidth}
           onResizeSidebar={onResizeSidebar}
         />
-        {orderedLanes.map((lane) => (
+        {visibleLanes.map((lane) => (
           <WeeklyLane
             key={lane.id}
             lane={lane}
@@ -248,11 +181,11 @@ export default function WeeklyView({
             columnWidth={columnWidth}
             registerLane={registerLane}
             registerTask={registerTask}
-            onLanePointerDown={handleLanePointerDown}
+            onLanePointerDown={onLanePointerDown}
             onTaskPointerDown={handleTaskPointerDown}
             onBarPointerDown={handleBarPointerDown}
             barDx={barDx}
-            laneDragging={laneDragId === lane.id}
+            laneDragging={draggingLaneId === lane.id}
             draggingTaskId={taskDragId}
             selected={selectedLaneId === lane.id}
             onSelectLane={onSelectLane}

@@ -14,6 +14,7 @@ import { isLifeLane } from "@/lib/lanes";
 import { fillFor } from "@/lib/colors";
 import { packEvents } from "@/lib/events";
 import { startDrag } from "@/lib/drag";
+import { useRowHeightDrag } from "@/lib/useRowHeightDrag";
 import Sidebar from "./Sidebar";
 import EventBlock from "./EventBlock";
 import DayColumns from "./DayColumns";
@@ -58,30 +59,14 @@ export default function SwimLaneRow({
   const life = isLifeLane(lane);
   const trackRef = useRef<HTMLDivElement | null>(null);
 
-  // Row-height drag (drag the lane's bottom edge). `dragHeight` is the live
-  // preview; the committed value lives on `lane.rowHeight`.
-  const [dragHeight, setDragHeight] = useState<number | null>(null);
-  const dragHeightRef = useRef<number | null>(null);
-  const effHeight = dragHeight ?? lane.rowHeight;
-
-  const onResizeRow = (e: ReactPointerEvent) => {
-    if (e.button !== 0) return;
-    e.preventDefault();
-    const startY = e.clientY;
-    const startH = effHeight ?? trackRef.current?.offsetHeight ?? 34;
-    startDrag(e, {
-      onMove: (ev) => {
-        const h = Math.max(32, Math.round(startH + (ev.clientY - startY)));
-        dragHeightRef.current = h;
-        setDragHeight(h);
-      },
-      onUp: () => {
-        if (dragHeightRef.current != null) interaction.onSetLaneHeight(lane.id, dragHeightRef.current);
-        dragHeightRef.current = null;
-        setDragHeight(null);
-      },
-    });
-  };
+  // Row-height drag (drag the lane's bottom edge). The committed value lives
+  // on `lane.rowHeight`.
+  const { effHeight, onResizeRow } = useRowHeightDrag(
+    lane.rowHeight,
+    () => trackRef.current?.offsetHeight ?? 34,
+    (h) => interaction.onSetLaneHeight(lane.id, h),
+    32,
+  );
 
   // Live preview while dragging an event edge to resize.
   const [preview, setPreview] = useState<{ eventId: string; start: string; end: string } | null>(
@@ -221,10 +206,7 @@ export default function SwimLaneRow({
               span={p.span}
               track={p.track}
               selected={interaction.selectedEventId === p.event.id}
-              editing={
-                interaction.editing?.kind === "event" &&
-                interaction.editing.eventId === p.event.id
-              }
+              editing={interaction.editingEventId === p.event.id}
               dragging={draggingId === p.event.id}
               onStartEdit={() => interaction.onStartEdit(p.event.id)}
               onCommitEdit={(title) => interaction.onCommitEdit(p.event.id, title)}

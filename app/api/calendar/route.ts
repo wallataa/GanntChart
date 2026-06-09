@@ -125,7 +125,8 @@ function isoDate(
 }
 
 function minusOneDay(iso: string): string {
-  const d = new Date(`${iso}T00:00:00`);
-  d.setDate(d.getDate() - 1);
+  // Do the math in UTC so the server's timezone can't shift the calendar day.
+  const d = new Date(`${iso}T00:00:00Z`);
+  d.setUTCDate(d.getUTCDate() - 1);
   return d.toISOString().slice(0, 10);
 }

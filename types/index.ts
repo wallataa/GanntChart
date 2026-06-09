@@ -93,11 +93,6 @@ export interface Subtask {
   done: boolean;
 }
 
-/** What's currently being text-edited inline in the grid. */
-export type EditTarget =
-  | { kind: "new"; laneId: string; date: string }
-  | { kind: "event"; eventId: string };
-
 /** What's currently being text-edited in the weekly view. */
 export type SubtaskEditTarget =
   | { kind: "new"; taskId: string; date: string }
@@ -139,9 +134,8 @@ export interface GridInteraction {
   selectedLaneId: string | null;
   /** Select a swim lane (click its label cell); null clears the selection. */
   onSelectLane: (laneId: string | null) => void;
-  editing: EditTarget | null;
-  /** Begin creating an event by typing into an empty cell. */
-  onStartNew: (laneId: string, date: string) => void;
+  /** Event whose title is being edited inline, if any. */
+  editingEventId: string | null;
   /**
    * Create a blank event spanning [startISO, endISO] (drawn by dragging across
    * empty cells) and immediately put it into title-edit mode. The block is a
@@ -152,8 +146,6 @@ export interface GridInteraction {
   onStartEdit: (eventId: string) => void;
   /** Select an event (for recolor / resize). */
   onSelect: (eventId: string) => void;
-  /** Commit a new event's typed title (empty title cancels). */
-  onCommitNew: (laneId: string, date: string, title: string) => void;
   /** Commit an edited title (empty title deletes the event). */
   onCommitEdit: (eventId: string, title: string) => void;
   /** Abort the current inline edit without saving. */

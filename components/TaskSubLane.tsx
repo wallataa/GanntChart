@@ -5,8 +5,9 @@ import type { DateRange, Event, Subtask, SwimLane, WeeklyInteraction } from "@/t
 import { daysInRange, isWithinRange, placeEvent, toISODate } from "@/lib/dates";
 import { fillFor } from "@/lib/colors";
 import { subtasksFor } from "@/lib/subtasks";
-import { startDrag } from "@/lib/drag";
+import { useRowHeightDrag } from "@/lib/useRowHeightDrag";
 import SubtaskItem from "./SubtaskItem";
+import SubtaskChecklist from "./SubtaskChecklist";
 import DayColumns from "./DayColumns";
 
 interface TaskSubLaneProps {
@@ -80,31 +81,15 @@ export default function TaskSubLane({
   // Disclosure toggle for the accumulated to-do list.
   const [todosOpen, setTodosOpen] = useState(true);
 
-  // Row-height drag (drag the task row's bottom edge). `dragHeight` is the live
-  // preview; the committed value lives on `task.rowHeight`. When set, the left
-  // and right columns cap at this height and scroll.
-  const [dragHeight, setDragHeight] = useState<number | null>(null);
-  const dragHeightRef = useRef<number | null>(null);
-  const effHeight = dragHeight ?? task.rowHeight;
-
-  const onResizeRow = (e: ReactPointerEvent) => {
-    if (e.button !== 0) return;
-    e.preventDefault();
-    const startY = e.clientY;
-    const startH = effHeight ?? rowRef.current?.offsetHeight ?? 40;
-    startDrag(e, {
-      onMove: (ev) => {
-        const h = Math.max(28, Math.round(startH + (ev.clientY - startY)));
-        dragHeightRef.current = h;
-        setDragHeight(h);
-      },
-      onUp: () => {
-        if (dragHeightRef.current != null) interaction.onSetTaskHeight(task.id, dragHeightRef.current);
-        dragHeightRef.current = null;
-        setDragHeight(null);
-      },
-    });
-  };
+  // Row-height drag (drag the task row's bottom edge). The committed value
+  // lives on `task.rowHeight`. When set, the left and right columns cap at
+  // this height and scroll.
+  const { effHeight, onResizeRow } = useRowHeightDrag(
+    task.rowHeight,
+    () => rowRef.current?.offsetHeight ?? 40,
+    (h) => interaction.onSetTaskHeight(task.id, h),
+    28,
+  );
 
   // Map a clientX to an ISO day within the task's visible span (for double-click
   // → add a subtask on the clicked day).
@@ -178,27 +163,7 @@ export default function TaskSubLane({
 
         {/* Accumulated to-do list for this task (live checkboxes). */}
         {manual && allSubs.length > 0 && todosOpen && (
-          <ul className="space-y-0.5 pl-4">
-            {allSubs.map((s) => (
-              <li key={s.id} className="flex items-start gap-1">
-                <input
-                  type="checkbox"
-                  checked={s.done}
-                  onChange={() => onToggleSubtask(s.id)}
-                  className="mt-[2px] h-2.5 w-2.5 shrink-0 cursor-pointer"
-                  aria-label={s.done ? "Mark not done" : "Mark done"}
-                />
-                <span
-                  className={[
-                    "fs-10 min-w-0 break-words",
-                    s.done ? "text-neutral-400 line-through" : "text-neutral-700",
-                  ].join(" ")}
-                >
-                  {s.title}
-                </span>
-              </li>
-            ))}
-          </ul>
+          <SubtaskChecklist subtasks={allSubs} onToggle={onToggleSubtask} className="pl-4" />
         )}
       </div>
 

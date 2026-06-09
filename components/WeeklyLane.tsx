@@ -11,7 +11,7 @@ import {
   toISODate,
 } from "@/lib/dates";
 import { fillFor } from "@/lib/colors";
-import { isLifeLane } from "@/lib/lanes";
+import { confirmDeleteLane, isLifeLane } from "@/lib/lanes";
 import { packEvents } from "@/lib/events";
 import TaskSubLane from "./TaskSubLane";
 import DayColumns from "./DayColumns";
@@ -131,12 +131,7 @@ export default function WeeklyLane({
             <button
               type="button"
               onClick={() => {
-                if (
-                  laneEventCount === 0 ||
-                  window.confirm(`Delete "${lane.label}" and its ${laneEventCount} event(s)?`)
-                ) {
-                  onDeleteLane(lane.id);
-                }
+                if (confirmDeleteLane(lane.label, laneEventCount)) onDeleteLane(lane.id);
               }}
               title={`Delete ${lane.label}`}
               aria-label={`Delete ${lane.label}`}

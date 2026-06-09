@@ -2,8 +2,9 @@
 
 import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
 import type { Event, GridInteraction, Subtask, SwimLane } from "@/types";
-import { isLifeLane } from "@/lib/lanes";
+import { confirmDeleteLane, isLifeLane } from "@/lib/lanes";
 import { fillFor } from "@/lib/colors";
+import SubtaskChecklist from "./SubtaskChecklist";
 
 interface SidebarProps {
   lane: SwimLane;
@@ -174,26 +175,7 @@ export default function Sidebar({
                   </span>
                 </button>
                 {open && (
-                <ul className="space-y-0.5 pl-3">
-                  {subs.map((s) => (
-                    <li key={s.id} className="flex items-start gap-1">
-                      <input
-                        type="checkbox"
-                        checked={s.done}
-                        onChange={() => onToggleSubtask(s.id)}
-                        className="mt-[2px] h-2.5 w-2.5 shrink-0 cursor-pointer"
-                        aria-label={s.done ? "Mark not done" : "Mark done"}
-                      />
-                      <span
-                        className={
-                          s.done ? "text-neutral-400 line-through" : "text-neutral-700"
-                        }
-                      >
-                        {s.title}
-                      </span>
-                    </li>
-                  ))}
-                </ul>
+                  <SubtaskChecklist subtasks={subs} onToggle={onToggleSubtask} className="pl-3" />
                 )}
               </div>
               );
@@ -223,10 +205,7 @@ export default function Sidebar({
             type="button"
             onClick={(e) => {
               e.stopPropagation();
-              if (
-                tasks.length === 0 ||
-                window.confirm(`Delete "${lane.label}" and its ${tasks.length} event(s)?`)
-              ) {
+              if (confirmDeleteLane(lane.label, tasks.length)) {
                 interaction.onDeleteLane(lane.id);
               }
             }}
