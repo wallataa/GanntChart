@@ -56,7 +56,8 @@ Everything except the Google-Calendar-backed Life lane works **without** any of 
 - **‹ Today ›** — navigate the active view's window (1 week at a time; Today resets it).
 - **Font − % +** — scale the grid text (applies to both views, persisted).
 - **Day-column width** — drag the right edge of any column in the date header (both views, persisted).
-- **Max row − value +** — cap weekly row height (or Off); taller rows scroll. Persisted.
+- **Max row − value +** — cap weekly row height (or Off); taller rows scroll. Persisted. (In the main
+  view, drag a lane's bottom edge to set its height instead.)
 - **Hide empty lanes** (weekly only) — hide lanes with no task in the fortnight. Persisted.
 - **Fill** swatches (both views) — recolor the selected lane (click its label) or event/task, or set
   the color for the next event.
@@ -67,6 +68,7 @@ Everything except the Google-Calendar-backed Life lane works **without** any of 
 - **Drag an event body** → move it across dates and/or into another lane.
 - **Drag an event edge** → resize into a multi-day span.
 - **Double-click** → rename. **Click** = select; **Delete/Backspace** removes; **Esc** deselects.
+- **Drag a lane's bottom edge** → set its row height (taller content scrolls); double-click to reset.
 - **Sidebar** is editable in place: click the lane label to rename, the notes area to edit
   (one note per line), and the `⠿` grip to drag-reorder the lane. The sidebar also shows an
   accumulated **to-do list** of the lane's subtasks (from the weekly view), grouped by task.

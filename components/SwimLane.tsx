@@ -63,6 +63,32 @@ export default function SwimLaneRow({
   const life = isLifeLane(lane);
   const trackRef = useRef<HTMLDivElement | null>(null);
 
+  // Row-height drag (drag the lane's bottom edge). `dragHeight` is the live
+  // preview; the committed value lives on `lane.rowHeight`.
+  const [dragHeight, setDragHeight] = useState<number | null>(null);
+  const dragHeightRef = useRef<number | null>(null);
+  const effHeight = dragHeight ?? lane.rowHeight;
+
+  const onResizeRow = (e: ReactPointerEvent) => {
+    if (e.button !== 0) return;
+    e.preventDefault();
+    const startY = e.clientY;
+    const startH = effHeight ?? trackRef.current?.offsetHeight ?? 34;
+    const onMove = (ev: PointerEvent) => {
+      const h = Math.max(32, Math.round(startH + (ev.clientY - startY)));
+      dragHeightRef.current = h;
+      setDragHeight(h);
+    };
+    const onUp = () => {
+      window.removeEventListener("pointermove", onMove);
+      if (dragHeightRef.current != null) interaction.onSetLaneHeight(lane.id, dragHeightRef.current);
+      dragHeightRef.current = null;
+      setDragHeight(null);
+    };
+    window.addEventListener("pointermove", onMove);
+    window.addEventListener("pointerup", onUp, { once: true });
+  };
+
   // Live preview while dragging an event edge to resize.
   const [drag, setDrag] = useState<{ eventId: string; edge: ResizeEdge } | null>(null);
   const [preview, setPreview] = useState<{ eventId: string; start: string; end: string } | null>(
@@ -132,8 +158,8 @@ export default function SwimLaneRow({
   return (
     <div
       className={[
-        "flex transition-shadow",
-        laneDragging ? "relative z-20 bg-white opacity-90 shadow-md" : "",
+        "relative flex transition-shadow",
+        laneDragging ? "z-20 bg-white opacity-90 shadow-md" : "",
       ].join(" ")}
     >
       <Sidebar
@@ -143,6 +169,7 @@ export default function SwimLaneRow({
         tasks={events}
         subtasks={subtasks}
         onToggleSubtask={onToggleSubtask}
+        maxHeight={effHeight}
       />
 
       {/* Track area */}
@@ -152,7 +179,11 @@ export default function SwimLaneRow({
           registerTrack(lane.id, el);
         }}
         className="relative flex-1 border-b border-neutral-200"
-        style={{ minHeight: 34, backgroundColor: `${fillFor(lane.color)}24` }}
+        style={{
+          minHeight: 34,
+          backgroundColor: `${fillFor(lane.color)}24`,
+          ...(effHeight ? { height: effHeight, overflowY: "auto" } : null),
+        }}
       >
         {/* Background: column borders, weekend tint, today highlight, click targets */}
         <div className="absolute inset-0 grid" style={{ gridTemplateColumns: columns }}>
@@ -232,6 +263,14 @@ export default function SwimLaneRow({
           )}
         </div>
       </div>
+
+      {/* Bottom-edge handle: drag to set this lane's row height; double-click resets. */}
+      <div
+        onPointerDown={onResizeRow}
+        onDoubleClick={() => interaction.onSetLaneHeight(lane.id, 0)}
+        title="Drag to resize row height · double-click to reset"
+        className="absolute bottom-0 left-0 right-0 z-20 h-1.5 cursor-row-resize hover:bg-blue-400/40"
+      />
     </div>
   );
 }

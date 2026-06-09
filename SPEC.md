@@ -22,8 +22,9 @@ A toolbar sits above the grid in both views:
   `localStorage` (applied via the `--fs` CSS variable).
 - **Day-column width** — resized directly by **dragging the right edge of any column** in the date
   header (28–120px, persisted to `localStorage`); no toolbar slider.
-- **Max row** control (− / value / +) — caps weekly row height at 80–800px (or **Off**); rows whose
-  content is taller scroll within the cap. Persisted (`--max-row-h` CSS variable).
+- **Max row** control (− / value / +) — caps **weekly** row height at 80–800px (or **Off**); rows
+  whose content is taller scroll within the cap. Persisted (`--max-row-h` CSS variable). (In the
+  **main** view, row height is set per-lane by dragging the lane's bottom edge instead.)
 - **Hide empty lanes** toggle (*weekly view only*) — hides swim lanes with no task/event in the
   visible fortnight. Persisted.
 - **Fill** color swatches — *both views*. Recolors the currently selected **lane** (click a lane's
@@ -86,6 +87,8 @@ can't be deleted or moved off the last position.
 - **Drag either edge** → resize into a multi-day span.
 - **Double-click** → rename inline; clearing the text deletes the event.
 - **Click** selects; **Delete/Backspace** removes the selection; **Esc** cancels/deselects.
+- **Drag a lane's bottom edge** → set that lane's row height; taller content scrolls within it.
+  Double-click the edge to reset to auto. Persisted per lane (`rowHeight`).
 - GCal (Life lane) events are read-only.
 
 ### Date range
@@ -155,7 +158,7 @@ Local data is in `localStorage`; Google Calendar is fetched live (not stored).
 
 | Key | Contents |
 |-----|----------|
-| `gantt:lanes` | Swim lanes (label, color, notes, order) |
+| `gantt:lanes` | Swim lanes (label, color, notes, order, `rowHeight`) |
 | `gantt:events` | Manual events |
 | `gantt:subtasks` | Weekly-view subtasks (`taskId`, `date`, `title`, `done`) |
 | `gantt:colWidth` | Day-column width |

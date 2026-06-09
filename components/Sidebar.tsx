@@ -15,6 +15,8 @@ interface SidebarProps {
   tasks: Event[];
   subtasks: Subtask[];
   onToggleSubtask: (subtaskId: string) => void;
+  /** Fixed row height in px (matches the track); content taller scrolls. */
+  maxHeight?: number;
 }
 
 /**
@@ -30,6 +32,7 @@ export default function Sidebar({
   tasks,
   subtasks,
   onToggleSubtask,
+  maxHeight,
 }: SidebarProps) {
   const life = isLifeLane(lane);
 
@@ -78,6 +81,7 @@ export default function Sidebar({
         // Lane-color tint composited over the opaque white base so the sticky
         // sidebar still masks horizontally-scrolled content (no bleed-through).
         backgroundImage: `linear-gradient(${fillFor(lane.color)}22, ${fillFor(lane.color)}22)`,
+        ...(maxHeight ? { maxHeight, overflowY: "auto" } : null),
       }}
     >
       {/* Drag handle — grab to reorder the whole lane (Life lane is locked) */}

@@ -383,6 +383,14 @@ export default function Home() {
   const handleSetLaneNotes = (id: string, notes: string[]) =>
     persistLanes(lanes.map((l) => (l.id === id ? { ...l, notes } : l)));
 
+  // Fixed row height for a main-view lane (drag its bottom edge). 0 = back to auto.
+  const handleSetLaneHeight = (id: string, height: number) =>
+    persistLanes(
+      lanes.map((l) =>
+        l.id === id ? { ...l, rowHeight: height > 0 ? Math.round(height) : undefined } : l,
+      ),
+    );
+
   const handleDeleteLane = (id: string) => {
     const target = lanes.find((l) => l.id === id);
     if (!target || isLifeLane(target)) return; // Life lane is locked.
@@ -474,6 +482,7 @@ export default function Home() {
     onRenameLane: handleRenameLane,
     onSetLaneNotes: handleSetLaneNotes,
     onReorderLanes: handleReorderLanes,
+    onSetLaneHeight: handleSetLaneHeight,
   };
 
   return (

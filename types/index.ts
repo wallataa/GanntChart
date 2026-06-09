@@ -41,6 +41,11 @@ export interface SwimLane {
   /** Bullet-point notes / sub-tasks shown in the left sidebar. */
   notes: string[];
   /**
+   * Optional fixed row height in px for the main view (set by dragging the
+   * lane's bottom edge); content taller than this scrolls. Undefined = auto.
+   */
+  rowHeight?: number;
+  /**
    * The "Life" lane is special: events come from Google Calendar and the lane
    * is locked (cannot be deleted or reordered past the last position).
    */
@@ -151,4 +156,6 @@ export interface GridInteraction {
   onSetLaneNotes: (id: string, notes: string[]) => void;
   /** Reorder lanes by moving the lane at `from` to index `to`. */
   onReorderLanes: (from: number, to: number) => void;
+  /** Set a lane's fixed row height in px (0 / undefined = auto). */
+  onSetLaneHeight: (id: string, height: number) => void;
 }
