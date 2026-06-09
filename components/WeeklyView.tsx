@@ -17,6 +17,10 @@ interface WeeklyViewProps {
   columnWidth: number;
   /** Resize the day-column width (dragging a column edge in the header). */
   onColumnWidthChange: (width: number) => void;
+  /** Left-column widths + resize handler (dragging the sidebar edges). */
+  sidebarNotesWidth: number;
+  sidebarLabelWidth: number;
+  onResizeSidebar: (part: "notes" | "label", width: number) => void;
   onReorderLanes: (from: number, to: number) => void;
   /** Move a task to a lane + vertical position (insert before `beforeTaskId`,
       or append when null) and date span, in one update. */
@@ -49,6 +53,9 @@ export default function WeeklyView({
   interaction,
   columnWidth,
   onColumnWidthChange,
+  sidebarNotesWidth,
+  sidebarLabelWidth,
+  onResizeSidebar,
   onReorderLanes,
   onMoveTask,
   selectedLaneId,
@@ -238,6 +245,9 @@ export default function WeeklyView({
           range={range}
           columnWidth={columnWidth}
           onColumnWidthChange={onColumnWidthChange}
+          sidebarNotesWidth={sidebarNotesWidth}
+          sidebarLabelWidth={sidebarLabelWidth}
+          onResizeSidebar={onResizeSidebar}
         />
         {orderedLanes.map((lane) => (
           <WeeklyLane

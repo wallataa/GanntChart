@@ -1,10 +1,8 @@
 "use client";
 
-import { useRef, type PointerEvent as ReactPointerEvent } from "react";
+import { useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
 import type { DateRange, Event, Subtask, SwimLane, WeeklyInteraction } from "@/types";
 import {
-  SIDEBAR_LABEL_WIDTH,
-  SIDEBAR_NOTES_WIDTH,
   daysInRange,
   isToday,
   isWeekend,
@@ -35,7 +33,8 @@ interface TaskSubLaneProps {
   dragging: boolean;
 }
 
-const SIDEBAR_WIDTH = SIDEBAR_NOTES_WIDTH + SIDEBAR_LABEL_WIDTH;
+/** Combined left-column width (notes + label), driven by the `--sb-w` CSS var. */
+const SIDEBAR_WIDTH = "var(--sb-w, 316px)";
 
 /**
  * One task row. The task's date span is drawn as a colored bar (with the title
@@ -81,6 +80,37 @@ export default function TaskSubLane({
   const showGrid = manual && (inWindow.length > 0 || adding);
 
   const trackRef = useRef<HTMLDivElement>(null);
+  const rowRef = useRef<HTMLDivElement | null>(null);
+
+  // Disclosure toggle for the accumulated to-do list.
+  const [todosOpen, setTodosOpen] = useState(true);
+
+  // Row-height drag (drag the task row's bottom edge). `dragHeight` is the live
+  // preview; the committed value lives on `task.rowHeight`. When set, the left
+  // and right columns cap at this height and scroll.
+  const [dragHeight, setDragHeight] = useState<number | null>(null);
+  const dragHeightRef = useRef<number | null>(null);
+  const effHeight = dragHeight ?? task.rowHeight;
+
+  const onResizeRow = (e: ReactPointerEvent) => {
+    if (e.button !== 0) return;
+    e.preventDefault();
+    const startY = e.clientY;
+    const startH = effHeight ?? rowRef.current?.offsetHeight ?? 40;
+    const onMove = (ev: PointerEvent) => {
+      const h = Math.max(28, Math.round(startH + (ev.clientY - startY)));
+      dragHeightRef.current = h;
+      setDragHeight(h);
+    };
+    const onUp = () => {
+      window.removeEventListener("pointermove", onMove);
+      if (dragHeightRef.current != null) interaction.onSetTaskHeight(task.id, dragHeightRef.current);
+      dragHeightRef.current = null;
+      setDragHeight(null);
+    };
+    window.addEventListener("pointermove", onMove);
+    window.addEventListener("pointerup", onUp, { once: true });
+  };
 
   // Map a clientX to an ISO day within the task's visible span (for double-click
   // → add a subtask on the clicked day).
@@ -97,16 +127,19 @@ export default function TaskSubLane({
 
   return (
     <div
-      ref={(el) => registerTask(task.id, el)}
+      ref={(el) => {
+        rowRef.current = el;
+        registerTask(task.id, el);
+      }}
       className={[
-        "flex border-b border-neutral-100",
-        dragging ? "relative z-20 bg-white opacity-90 shadow" : "",
+        "relative flex border-b border-neutral-100",
+        dragging ? "z-20 bg-white opacity-90 shadow" : "",
       ].join(" ")}
     >
       {/* Left: grip + title (fallback) + the accumulated subtask checklist */}
       <div
         className="row-cap sticky left-0 z-10 flex shrink-0 flex-col gap-0.5 bg-white py-1 pl-1 pr-2"
-        style={{ width: SIDEBAR_WIDTH }}
+        style={{ width: SIDEBAR_WIDTH, maxHeight: effHeight }}
       >
         <div className="flex items-start gap-1">
           {manual ? (
@@ -124,10 +157,24 @@ export default function TaskSubLane({
             className="mt-[3px] inline-block h-2.5 w-2.5 shrink-0 rounded-sm border border-black/10"
             style={{ backgroundColor: accent }}
           />
-          {/* Title heading for this task's accumulated to-do list. */}
-          <span className="fs-12 min-w-0 flex-1 font-medium leading-snug text-neutral-800">
-            {task.title}
-          </span>
+          {/* Title heading — a disclosure toggle for the to-do list when it has any. */}
+          {manual && allSubs.length > 0 ? (
+            <button
+              type="button"
+              onClick={() => setTodosOpen((o) => !o)}
+              className="fs-12 flex min-w-0 flex-1 items-center gap-1 text-left font-medium leading-snug text-neutral-800"
+              aria-expanded={todosOpen}
+            >
+              <span className="w-2 shrink-0 text-[8px] leading-none text-neutral-400">
+                {todosOpen ? "▼" : "▶"}
+              </span>
+              <span className="truncate">{task.title}</span>
+            </button>
+          ) : (
+            <span className="fs-12 min-w-0 flex-1 font-medium leading-snug text-neutral-800">
+              {task.title}
+            </span>
+          )}
           {manual && inWindow.length > 0 && (
             <span className="fs-10 shrink-0 text-neutral-400">
               {doneCount}/{inWindow.length}
@@ -136,7 +183,7 @@ export default function TaskSubLane({
         </div>
 
         {/* Accumulated to-do list for this task (live checkboxes). */}
-        {manual && allSubs.length > 0 && (
+        {manual && allSubs.length > 0 && todosOpen && (
           <ul className="space-y-0.5 pl-4">
             {allSubs.map((s) => (
               <li key={s.id} className="flex items-start gap-1">
@@ -177,8 +224,8 @@ export default function TaskSubLane({
           ))}
         </div>
 
-        {/* Foreground (scrolls within the max row height; backgrounds stay full) */}
-        <div className="row-cap relative">
+        {/* Foreground (scrolls within the row height; backgrounds stay full) */}
+        <div className="row-cap relative" style={{ maxHeight: effHeight }}>
         {/* Title bar row */}
         {placement && (
           <div className="relative grid py-[2px]" style={{ gridTemplateColumns: columns }}>
@@ -264,6 +311,14 @@ export default function TaskSubLane({
         )}
         </div>
       </div>
+
+      {/* Bottom-edge handle: drag to set this task's row height; double-click resets. */}
+      <div
+        onPointerDown={onResizeRow}
+        onDoubleClick={() => interaction.onSetTaskHeight(task.id, 0)}
+        title="Drag to resize row height · double-click to reset"
+        className="absolute bottom-0 left-0 right-0 z-20 h-1.5 cursor-row-resize hover:bg-blue-400/40"
+      />
     </div>
   );
 }

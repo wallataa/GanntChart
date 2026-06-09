@@ -2,7 +2,6 @@
 
 import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
 import type { Event, GridInteraction, Subtask, SwimLane } from "@/types";
-import { SIDEBAR_LABEL_WIDTH, SIDEBAR_NOTES_WIDTH } from "@/lib/dates";
 import { isLifeLane } from "@/lib/lanes";
 import { fillFor } from "@/lib/colors";
 
@@ -35,6 +34,16 @@ export default function Sidebar({
   maxHeight,
 }: SidebarProps) {
   const life = isLifeLane(lane);
+
+  // Which task to-do groups are collapsed (disclosure toggle).
+  const [collapsedTodos, setCollapsedTodos] = useState<Set<string>>(new Set());
+  const toggleTodo = (taskId: string) =>
+    setCollapsedTodos((prev) => {
+      const next = new Set(prev);
+      if (next.has(taskId)) next.delete(taskId);
+      else next.add(taskId);
+      return next;
+    });
 
   // Local draft state so typing doesn't thrash localStorage on every keystroke;
   // we commit on blur.
@@ -77,7 +86,7 @@ export default function Sidebar({
     <div
       className="sticky left-0 z-10 flex shrink-0 border-b border-neutral-200 bg-white"
       style={{
-        width: SIDEBAR_NOTES_WIDTH + SIDEBAR_LABEL_WIDTH,
+        width: "var(--sb-w, 316px)",
         // Lane-color tint composited over the opaque white base so the sticky
         // sidebar still masks horizontally-scrolled content (no bleed-through).
         backgroundImage: `linear-gradient(${fillFor(lane.color)}22, ${fillFor(lane.color)}22)`,
@@ -105,7 +114,7 @@ export default function Sidebar({
       {/* Column A — notes */}
       <div
         className="fs-11 shrink-0 py-1.5 pl-5 pr-2 leading-snug text-neutral-700"
-        style={{ width: SIDEBAR_NOTES_WIDTH }}
+        style={{ width: "var(--sb-notes, 196px)" }}
       >
         {editingNotes ? (
           <textarea
@@ -146,12 +155,26 @@ export default function Sidebar({
         {/* Accumulated to-do list (subtasks from the weekly view), grouped by task */}
         {taskGroups.length > 0 && (
           <div className="mt-2 space-y-1 border-t border-neutral-100 pt-1.5">
-            {taskGroups.map(({ task, subs }) => (
+            {taskGroups.map(({ task, subs }) => {
+              const open = !collapsedTodos.has(task.id);
+              return (
               <div key={task.id}>
-                <div className="fs-10 truncate font-semibold text-neutral-500">
-                  {task.title}
-                </div>
-                <ul className="space-y-0.5">
+                <button
+                  type="button"
+                  onClick={() => toggleTodo(task.id)}
+                  className="fs-10 flex w-full items-center gap-1 text-left font-semibold text-neutral-500 hover:text-neutral-700"
+                  aria-expanded={open}
+                >
+                  <span className="w-2 shrink-0 text-[8px] leading-none text-neutral-400">
+                    {open ? "▼" : "▶"}
+                  </span>
+                  <span className="truncate">{task.title}</span>
+                  <span className="shrink-0 text-neutral-400">
+                    {subs.filter((s) => s.done).length}/{subs.length}
+                  </span>
+                </button>
+                {open && (
+                <ul className="space-y-0.5 pl-3">
                   {subs.map((s) => (
                     <li key={s.id} className="flex items-start gap-1">
                       <input
@@ -171,8 +194,10 @@ export default function Sidebar({
                     </li>
                   ))}
                 </ul>
+                )}
               </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>
@@ -187,7 +212,7 @@ export default function Sidebar({
             : "border-neutral-200",
         ].join(" ")}
         style={{
-          width: SIDEBAR_LABEL_WIDTH,
+          width: "var(--sb-label, 120px)",
           backgroundImage: `linear-gradient(${fillFor(lane.color)}55, ${fillFor(lane.color)}55)`,
         }}
       >

@@ -22,9 +22,12 @@ A toolbar sits above the grid in both views:
   `localStorage` (applied via the `--fs` CSS variable).
 - **Day-column width** — resized directly by **dragging the right edge of any column** in the date
   header (28–120px, persisted to `localStorage`); no toolbar slider.
-- **Max row** control (− / value / +) — caps **weekly** row height at 80–800px (or **Off**); rows
-  whose content is taller scroll within the cap. Persisted (`--max-row-h` CSS variable). (In the
-  **main** view, row height is set per-lane by dragging the lane's bottom edge instead.)
+- **Left-column widths** — the notes and label columns are resized by **dragging their right edges**
+  in the header's sticky top-left corner (driven by `--sb-notes` / `--sb-label` CSS vars, persisted).
+- **Fit rows** button — resets manual row heights to auto (fit-to-content) for the active view:
+  main = every lane; weekly = every task row.
+- Row heights are set by **dragging a row's bottom edge** — per lane in the main view, per task row
+  in the weekly view; taller content scrolls within the set height (double-click the edge to reset).
 - **Hide empty lanes** toggle (*weekly view only*) — hides swim lanes with no task/event in the
   visible fortnight. Persisted.
 - **Fill** color swatches — *both views*. Recolors the currently selected **lane** (click a lane's
@@ -45,7 +48,7 @@ A toolbar sits above the grid in both views:
 ### Left sidebar
 - **Column A** (notes): Bullet task notes, editable in place. In the main view it also shows an
   accumulated **to-do list** of the lane's subtasks (from the weekly view), grouped by task, with
-  live checkboxes.
+  live checkboxes; each task group is a **collapsible disclosure toggle** (▼/▶).
 - **Column B** (label): Swim lane label. **Click** selects the lane (so the Fill swatches recolor
   it); **double-click** renames it in place. A `⠿` grip drags the lane to reorder it.
 - Each lane is tinted by its color in **both** views — a light wash on the row/track and a stronger
@@ -92,7 +95,8 @@ can't be deleted or moved off the last position.
 - GCal (Life lane) events are read-only.
 
 ### Date range
-- Default view: current month + next month (~8 weeks visible), horizontal scroll for the rest.
+- Default view: starts at **today** (today is the first column) and spans ~6 months (to the end of
+  the month 5 months ahead); horizontal scroll for the rest.
 
 ---
 
@@ -109,7 +113,9 @@ A two-week (14-day) window for day planning.
   sideways to reschedule its dates, up/down to reorder within its lane or move it to another lane
   (all reflected in the main view); **double-click** to add a subtask on the clicked day.
 - The left column shows the task title heading and accumulates its whole **to-do list** (subtasks,
-  with live checkboxes).
+  with live checkboxes); the title is a **disclosure toggle** (▼/▶) that collapses the list.
+- **Drag a task row's bottom edge** to set its height (taller content scrolls); double-click to reset.
+  Persisted per task (`rowHeight`).
 - **Subtasks** are per-day checklist items (`title` + `done`) that stack within a day cell. Click an
   empty day under a task → type → **Enter** adds it and opens the next input. Checkbox toggles done
   (strikethrough); click text to rename; clear + Enter deletes; Esc cancels. (No `+` buttons.)
@@ -159,12 +165,12 @@ Local data is in `localStorage`; Google Calendar is fetched live (not stored).
 | Key | Contents |
 |-----|----------|
 | `gantt:lanes` | Swim lanes (label, color, notes, order, `rowHeight`) |
-| `gantt:events` | Manual events |
+| `gantt:events` | Manual events (incl. per-task weekly `rowHeight`) |
 | `gantt:subtasks` | Weekly-view subtasks (`taskId`, `date`, `title`, `done`) |
 | `gantt:colWidth` | Day-column width |
 | `gantt:fontScale` | Grid font scale (0.8–1.8) |
-| `gantt:maxRowHeight` | Max weekly row height in px (0 = off) |
 | `gantt:hideEmptyWeekly` | Hide empty lanes in the weekly view (`"1"`/`"0"`) |
+| `gantt:sbNotesW` / `gantt:sbLabelW` | Left-column widths (notes / label) |
 
 ---
 

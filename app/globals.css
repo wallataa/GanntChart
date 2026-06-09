@@ -28,10 +28,9 @@ body {
   font-size: calc(14px * var(--fs, 1));
 }
 
-/* Cap a weekly row's growing content at `--max-row-h` and scroll past it.
-   Defaults to no cap when the variable is unset/`none`. */
+/* Scroll a weekly row's growing content past an inline `max-height` (set per
+   task row). With no max-height it grows freely. */
 .row-cap {
-  max-height: var(--max-row-h, none);
   overflow-y: auto;
   scrollbar-width: thin;
 }

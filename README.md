@@ -56,8 +56,9 @@ Everything except the Google-Calendar-backed Life lane works **without** any of 
 - **‹ Today ›** — navigate the active view's window (1 week at a time; Today resets it).
 - **Font − % +** — scale the grid text (applies to both views, persisted).
 - **Day-column width** — drag the right edge of any column in the date header (both views, persisted).
-- **Max row − value +** — cap weekly row height (or Off); taller rows scroll. Persisted. (In the main
-  view, drag a lane's bottom edge to set its height instead.)
+- **Left-column widths** — drag the notes/label column edges in the header's top-left corner.
+- **Fit rows** — reset row heights to fit content (main = lanes, weekly = task rows). Drag a row's
+  bottom edge to set a height (taller content scrolls); double-click the edge to reset just that row.
 - **Hide empty lanes** (weekly only) — hide lanes with no task in the fortnight. Persisted.
 - **Fill** swatches (both views) — recolor the selected lane (click its label) or event/task, or set
   the color for the next event.
@@ -71,7 +72,8 @@ Everything except the Google-Calendar-backed Life lane works **without** any of 
 - **Drag a lane's bottom edge** → set its row height (taller content scrolls); double-click to reset.
 - **Sidebar** is editable in place: click the lane label to rename, the notes area to edit
   (one note per line), and the `⠿` grip to drag-reorder the lane. The sidebar also shows an
-  accumulated **to-do list** of the lane's subtasks (from the weekly view), grouped by task.
+  accumulated **to-do list** of the lane's subtasks (from the weekly view), grouped by task — each
+  group is a collapsible toggle (▼/▶).
 
 ### Weekly view (day planning)
 - Each swim lane's tasks appear as **sub-lanes**; a task shows if it overlaps the fortnight or
@@ -97,8 +99,8 @@ Local data lives in `localStorage`; Google Calendar is fetched live.
 | `gantt:subtasks` | Weekly-view subtasks |
 | `gantt:colWidth` | Day-column width |
 | `gantt:fontScale` | Grid font scale |
-| `gantt:maxRowHeight` | Max weekly row height (px; 0 = off) |
 | `gantt:hideEmptyWeekly` | Hide empty lanes in the weekly view |
+| `gantt:sbNotesW` / `gantt:sbLabelW` | Left-column widths |
 
 ## Project structure
 

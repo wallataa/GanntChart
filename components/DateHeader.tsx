@@ -4,8 +4,6 @@ import type { PointerEvent as ReactPointerEvent } from "react";
 import type { DateRange } from "@/types";
 import {
   COLUMN_WIDTH,
-  SIDEBAR_LABEL_WIDTH,
-  SIDEBAR_NOTES_WIDTH,
   dayAbbrev,
   dayNumber,
   daysInRange,
@@ -20,13 +18,23 @@ interface DateHeaderProps {
   columnWidth?: number;
   /** Resize the (shared) day-column width by dragging a column edge. */
   onColumnWidthChange?: (width: number) => void;
+  /** Current left-column widths + handler to resize them by dragging edges. */
+  sidebarNotesWidth?: number;
+  sidebarLabelWidth?: number;
+  onResizeSidebar?: (part: "notes" | "label", width: number) => void;
 }
+
+/** The sidebar width comes from the `--sb-w` CSS var (set on the grid wrapper). */
+const SIDEBAR_VAR = "var(--sb-w, 316px)";
 
 /** Three-row sticky header: month groups, day-of-week, date number. */
 export default function DateHeader({
   range,
   columnWidth = COLUMN_WIDTH,
   onColumnWidthChange,
+  sidebarNotesWidth = 0,
+  sidebarLabelWidth = 0,
+  onResizeSidebar,
 }: DateHeaderProps) {
   const days = daysInRange(range);
   const groups = monthGroups(range);
@@ -45,13 +53,26 @@ export default function DateHeader({
     window.addEventListener("pointerup", onUp, { once: true });
   };
 
+  // Drag a sidebar column's right edge to resize that left column.
+  const startSidebarResize = (part: "notes" | "label") => (e: ReactPointerEvent) => {
+    if (!onResizeSidebar || e.button !== 0) return;
+    e.preventDefault();
+    e.stopPropagation();
+    const startX = e.clientX;
+    const startW = part === "notes" ? sidebarNotesWidth : sidebarLabelWidth;
+    const onMove = (ev: PointerEvent) => onResizeSidebar(part, startW + (ev.clientX - startX));
+    const onUp = () => window.removeEventListener("pointermove", onMove);
+    window.addEventListener("pointermove", onMove);
+    window.addEventListener("pointerup", onUp, { once: true });
+  };
+
   return (
     <div className="sticky top-0 z-20 bg-white">
       {/* Month row */}
       <div className="flex border-b border-neutral-200">
         <div
           className="sticky left-0 z-10 shrink-0 bg-white"
-          style={{ width: SIDEBAR_NOTES_WIDTH + SIDEBAR_LABEL_WIDTH }}
+          style={{ width: SIDEBAR_VAR }}
         />
         {groups.map((g) => (
           <div
@@ -68,8 +89,25 @@ export default function DateHeader({
       <div className="flex border-b border-neutral-300">
         <div
           className="sticky left-0 z-10 shrink-0 bg-white"
-          style={{ width: SIDEBAR_NOTES_WIDTH + SIDEBAR_LABEL_WIDTH }}
-        />
+          style={{ width: SIDEBAR_VAR }}
+        >
+          {/* Drag the left columns' edges to resize them. */}
+          {onResizeSidebar && (
+            <>
+              <div
+                onPointerDown={startSidebarResize("notes")}
+                title="Drag to resize the notes column"
+                className="absolute top-0 z-30 h-full w-[6px] cursor-col-resize hover:bg-blue-400/40"
+                style={{ left: "calc(var(--sb-notes, 196px) - 3px)" }}
+              />
+              <div
+                onPointerDown={startSidebarResize("label")}
+                title="Drag to resize the label column"
+                className="absolute -right-[3px] top-0 z-30 h-full w-[6px] cursor-col-resize hover:bg-blue-400/40"
+              />
+            </>
+          )}
+        </div>
         {days.map((d) => {
           const weekend = isWeekend(d);
           const today = isToday(d);

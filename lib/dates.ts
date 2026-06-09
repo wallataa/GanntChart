@@ -1,13 +1,12 @@
 import {
   addDays,
+  addMonths,
   differenceInCalendarDays,
   eachDayOfInterval,
   endOfMonth,
   format,
   isSameDay,
   parseISO,
-  startOfMonth,
-  startOfWeek,
 } from "date-fns";
 import type { DateRange } from "@/types";
 
@@ -34,14 +33,13 @@ export function fromISODate(iso: string): Date {
 }
 
 /**
- * Default visible window: start of the current month through the end of the
- * next month (~8–9 weeks), which matches the "current + next month" default
- * in SPEC.md.
+ * Default visible window for the main view: starts at **today** (today is the
+ * first column) and runs ~6 months out, to the end of the month 5 months ahead.
  */
 export function defaultRange(today: Date = new Date()): DateRange {
-  const start = startOfMonth(today);
-  const end = endOfMonth(addDays(endOfMonth(today), 1));
-  return { start: toDateOnly(start), end: toDateOnly(end) };
+  const start = toDateOnly(today);
+  const end = toDateOnly(endOfMonth(addMonths(today, 5)));
+  return { start, end };
 }
 
 /** Every day in the range, inclusive of both bounds. */
@@ -141,14 +139,9 @@ export function placeEvent(
   return { colStart, span: colEnd - colStart + 1 };
 }
 
-/** Convenience for the week-start used when normalizing to Monday-based weeks. */
-export function weekStart(date: Date): Date {
-  return toDateOnly(startOfWeek(date, { weekStartsOn: 1 }));
-}
-
-/** Two-week (14-day) window starting at the Monday of `anchor`'s week. */
+/** Two-week (14-day) window starting at `anchor` (today by default). */
 export function weeklyRange(anchor: Date = new Date()): DateRange {
-  const start = weekStart(anchor);
+  const start = toDateOnly(anchor);
   return { start, end: toDateOnly(addDays(start, 13)) };
 }
 

@@ -3,8 +3,6 @@
 import type { PointerEvent as ReactPointerEvent } from "react";
 import type { DateRange, Event, Subtask, SwimLane, WeeklyInteraction } from "@/types";
 import {
-  SIDEBAR_LABEL_WIDTH,
-  SIDEBAR_NOTES_WIDTH,
   daysInRange,
   isToday,
   isWeekend,
@@ -41,7 +39,8 @@ interface WeeklyLaneProps {
   onToggleSubtask: (subtaskId: string) => void;
 }
 
-const SIDEBAR_WIDTH = SIDEBAR_NOTES_WIDTH + SIDEBAR_LABEL_WIDTH;
+/** Combined left-column width (notes + label), driven by the `--sb-w` CSS var. */
+const SIDEBAR_WIDTH = "var(--sb-w, 316px)";
 
 /** A project group: a lane header band followed by its task sub-lanes. */
 export default function WeeklyLane({

@@ -16,6 +16,10 @@ interface GanttGridProps {
   columnWidth: number;
   /** Resize the day-column width (dragging a column edge in the header). */
   onColumnWidthChange: (width: number) => void;
+  /** Left-column widths + resize handler (dragging the sidebar edges). */
+  sidebarNotesWidth: number;
+  sidebarLabelWidth: number;
+  onResizeSidebar: (part: "notes" | "label", width: number) => void;
   /** Subtasks, for the accumulated per-task to-do list in the sidebar. */
   subtasks: Subtask[];
   onToggleSubtask: (subtaskId: string) => void;
@@ -44,6 +48,9 @@ export default function GanttGrid({
   interaction,
   columnWidth,
   onColumnWidthChange,
+  sidebarNotesWidth,
+  sidebarLabelWidth,
+  onResizeSidebar,
   subtasks,
   onToggleSubtask,
 }: GanttGridProps) {
@@ -203,6 +210,9 @@ export default function GanttGrid({
           range={range}
           columnWidth={columnWidth}
           onColumnWidthChange={onColumnWidthChange}
+          sidebarNotesWidth={sidebarNotesWidth}
+          sidebarLabelWidth={sidebarLabelWidth}
+          onResizeSidebar={onResizeSidebar}
         />
         {orderedLanes.map((lane) => (
           <SwimLaneRow

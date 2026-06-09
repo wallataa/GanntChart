@@ -29,6 +29,11 @@ export interface Event {
   source: "manual" | "gcal";
   /** Original Google Calendar event id, when source === "gcal". */
   gcalId?: string;
+  /**
+   * Optional fixed height in px for this task's row in the weekly view (set by
+   * dragging its bottom edge); taller content scrolls. Undefined = auto.
+   */
+  rowHeight?: number;
 }
 
 /** A horizontal band (project / category). */
@@ -105,6 +110,8 @@ export interface WeeklyInteraction {
   selectedTaskId: string | null;
   /** Select a task (manual tasks only; GCal tasks are read-only). */
   onSelectTask: (taskId: string) => void;
+  /** Set a task's fixed weekly row height in px (0 / undefined = auto). */
+  onSetTaskHeight: (taskId: string, height: number) => void;
   /** Begin typing a new subtask in a task's day cell. */
   onStartNew: (taskId: string, date: string) => void;
   /** Begin editing an existing subtask's title. */

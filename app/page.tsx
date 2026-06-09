@@ -16,7 +16,15 @@ import type {
   ViewMode,
   WeeklyInteraction,
 } from "@/types";
-import { COLUMN_WIDTH, defaultRange, shiftRange, toISODate, weeklyRange } from "@/lib/dates";
+import {
+  COLUMN_WIDTH,
+  SIDEBAR_LABEL_WIDTH,
+  SIDEBAR_NOTES_WIDTH,
+  defaultRange,
+  shiftRange,
+  toISODate,
+  weeklyRange,
+} from "@/lib/dates";
 import { isLifeLane, loadLanes, pinLifeLast, saveLanes } from "@/lib/lanes";
 import { loadEvents, saveEvents } from "@/lib/events";
 import { loadSubtasks, saveSubtasks } from "@/lib/subtasks";
@@ -69,23 +77,29 @@ export default function Home() {
     }
   };
 
-  // Max weekly-row height in px (0 = off). Applied via the `--max-row-h` CSS
-  // var; rows taller than this scroll. Persisted.
-  const MAX_ROW_KEY = "gantt:maxRowHeight";
-  const [maxRowHeight, setMaxRowHeight] = useState<number>(0);
-  const stepMaxRow = (dir: 1 | -1) => {
-    let next: number;
-    if (maxRowHeight === 0) next = dir > 0 ? 160 : 0; // turn on from off
-    else {
-      next = maxRowHeight + dir * 40;
-      if (next < 80) next = 0; // below the floor turns it off
-      else next = Math.min(800, next);
-    }
-    setMaxRowHeight(next);
-    try {
-      window.localStorage.setItem(MAX_ROW_KEY, String(next));
-    } catch {
-      /* ignore */
+  // Adjustable left-column widths (notes + label), set by dragging the column
+  // edges in the header. Driven into the grid via CSS vars; persisted.
+  const SB_NOTES_KEY = "gantt:sbNotesW";
+  const SB_LABEL_KEY = "gantt:sbLabelW";
+  const [sidebarNotesWidth, setSidebarNotesWidth] = useState(SIDEBAR_NOTES_WIDTH);
+  const [sidebarLabelWidth, setSidebarLabelWidth] = useState(SIDEBAR_LABEL_WIDTH);
+  const changeSidebarWidth = (part: "notes" | "label", w: number) => {
+    if (part === "notes") {
+      const v = Math.max(120, Math.min(400, Math.round(w)));
+      setSidebarNotesWidth(v);
+      try {
+        window.localStorage.setItem(SB_NOTES_KEY, String(v));
+      } catch {
+        /* ignore */
+      }
+    } else {
+      const v = Math.max(60, Math.min(280, Math.round(w)));
+      setSidebarLabelWidth(v);
+      try {
+        window.localStorage.setItem(SB_LABEL_KEY, String(v));
+      } catch {
+        /* ignore */
+      }
     }
   };
 
@@ -132,9 +146,11 @@ export default function Home() {
     if (savedWidth >= 28 && savedWidth <= 120) setColumnWidth(savedWidth);
     const savedScale = Number(window.localStorage.getItem("gantt:fontScale"));
     if (savedScale >= 0.8 && savedScale <= 1.8) setFontScale(savedScale);
-    const savedMaxRow = Number(window.localStorage.getItem("gantt:maxRowHeight"));
-    if (savedMaxRow >= 80 && savedMaxRow <= 800) setMaxRowHeight(savedMaxRow);
     setHideEmptyLanes(window.localStorage.getItem("gantt:hideEmptyWeekly") === "1");
+    const sbN = Number(window.localStorage.getItem("gantt:sbNotesW"));
+    if (sbN >= 120 && sbN <= 400) setSidebarNotesWidth(sbN);
+    const sbL = Number(window.localStorage.getItem("gantt:sbLabelW"));
+    if (sbL >= 60 && sbL <= 280) setSidebarLabelWidth(sbL);
   }, []);
 
   // Fetch GCal events for the Life lane whenever the range, session, or the
@@ -352,10 +368,19 @@ export default function Home() {
     persistSubtasks(subtasks.map((s) => (s.id === id ? { ...s, title: name } : s)));
   };
 
+  // Fixed weekly-row height for a task (drag its bottom edge). 0 = back to auto.
+  const handleSetTaskHeight = (id: string, height: number) =>
+    persistEvents(
+      manualEvents.map((e) =>
+        e.id === id ? { ...e, rowHeight: height > 0 ? Math.round(height) : undefined } : e,
+      ),
+    );
+
   const weeklyInteraction: WeeklyInteraction = {
     editing: subEditing,
     selectedTaskId: selectedEventId,
     onSelectTask: handleSelectEvent,
+    onSetTaskHeight: handleSetTaskHeight,
     onStartNew: (taskId, date) => setSubEditing({ kind: "new", taskId, date }),
     onStartEdit: (subtaskId) => setSubEditing({ kind: "sub", subtaskId }),
     onCommitNew: handleCommitNewSubtask,
@@ -390,6 +415,12 @@ export default function Home() {
         l.id === id ? { ...l, rowHeight: height > 0 ? Math.round(height) : undefined } : l,
       ),
     );
+
+  // Toolbar "Fit rows": reset manual row heights for the active view to auto.
+  const fitRows = () => {
+    if (view === "weekly") persistEvents(manualEvents.map((e) => ({ ...e, rowHeight: undefined })));
+    else persistLanes(lanes.map((l) => ({ ...l, rowHeight: undefined })));
+  };
 
   const handleDeleteLane = (id: string) => {
     const target = lanes.find((l) => l.id === id);
@@ -562,27 +593,19 @@ export default function Home() {
           </button>
         </div>
 
-        {/* Max row height (− / value / +). 0 = off (rows grow freely). */}
-        <div className="flex items-center gap-1 border-l border-neutral-200 pl-3 text-sm">
-          <span className="text-xs text-neutral-500">Max row</span>
+        {/* Fit rows to content — reset manual row heights for the active view. */}
+        <div className="flex items-center border-l border-neutral-200 pl-3 text-sm">
           <button
             type="button"
-            onClick={() => stepMaxRow(-1)}
+            onClick={fitRows}
             className="rounded border border-neutral-300 px-2 py-1 hover:bg-neutral-50"
-            aria-label="Shorter max row height"
+            title={
+              view === "main"
+                ? "Fit lanes to content (reset row heights)"
+                : "Fit task rows to content (reset row heights)"
+            }
           >
-            −
-          </button>
-          <span className="w-10 text-center text-xs tabular-nums text-neutral-500">
-            {maxRowHeight ? `${maxRowHeight}px` : "Off"}
-          </span>
-          <button
-            type="button"
-            onClick={() => stepMaxRow(1)}
-            className="rounded border border-neutral-300 px-2 py-1 hover:bg-neutral-50"
-            aria-label="Taller max row height"
-          >
-            +
+            Fit rows
           </button>
         </div>
 
@@ -649,7 +672,9 @@ export default function Home() {
             style={
               {
                 ["--fs" as string]: fontScale,
-                ["--max-row-h" as string]: maxRowHeight ? `${maxRowHeight}px` : "none",
+                ["--sb-notes" as string]: `${sidebarNotesWidth}px`,
+                ["--sb-label" as string]: `${sidebarLabelWidth}px`,
+                ["--sb-w" as string]: `${sidebarNotesWidth + sidebarLabelWidth}px`,
               } as CSSProperties
             }
           >
@@ -661,6 +686,9 @@ export default function Home() {
                 interaction={interaction}
                 columnWidth={columnWidth}
                 onColumnWidthChange={changeColumnWidth}
+                sidebarNotesWidth={sidebarNotesWidth}
+                sidebarLabelWidth={sidebarLabelWidth}
+                onResizeSidebar={changeSidebarWidth}
                 subtasks={subtasks}
                 onToggleSubtask={weeklyInteraction.onToggle}
               />
@@ -673,6 +701,9 @@ export default function Home() {
                 interaction={weeklyInteraction}
                 columnWidth={columnWidth}
                 onColumnWidthChange={changeColumnWidth}
+                sidebarNotesWidth={sidebarNotesWidth}
+                sidebarLabelWidth={sidebarLabelWidth}
+                onResizeSidebar={changeSidebarWidth}
                 onReorderLanes={handleReorderLanes}
                 onMoveTask={handleMoveTask}
                 selectedLaneId={selectedLaneId}
