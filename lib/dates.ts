@@ -12,6 +12,9 @@ import type { DateRange } from "@/types";
 
 /** Width of a single date column in pixels. Keep in sync with the grid layout. */
 export const COLUMN_WIDTH = 46;
+/** Default day-column width for the weekly view — wide enough that per-day
+ *  subtask text stays readable. */
+export const WEEK_COLUMN_WIDTH = 90;
 /** Combined width of the two left sidebar columns (notes + lane label). */
 export const SIDEBAR_NOTES_WIDTH = 196;
 export const SIDEBAR_LABEL_WIDTH = 120;
@@ -70,6 +73,18 @@ export function isWeekend(date: Date): boolean {
 /** True if `date` is the same calendar day as today. */
 export function isToday(date: Date, today: Date = new Date()): boolean {
   return isSameDay(toDateOnly(date), toDateOnly(today));
+}
+
+/** True on the first day of a month (for stronger grid boundary lines). */
+export function isMonthStart(date: Date): boolean {
+  return date.getDate() === 1;
+}
+
+/** Human label for the visible window, e.g. "Jun 10 – Jul 22, 2026". */
+export function formatRangeLabel(range: DateRange): string {
+  const sameYear = range.start.getFullYear() === range.end.getFullYear();
+  const start = format(range.start, sameYear ? "MMM d" : "MMM d, yyyy");
+  return `${start} – ${format(range.end, "MMM d, yyyy")}`;
 }
 
 /** Shift the whole window by `weeks` (negative = earlier). */

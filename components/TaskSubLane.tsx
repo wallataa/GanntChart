@@ -9,6 +9,7 @@ import { useRowHeightDrag } from "@/lib/useRowHeightDrag";
 import SubtaskItem from "./SubtaskItem";
 import SubtaskChecklist from "./SubtaskChecklist";
 import DayColumns from "./DayColumns";
+import { GripIcon } from "./icons";
 
 interface TaskSubLaneProps {
   task: Event;
@@ -111,13 +112,13 @@ export default function TaskSubLane({
         registerTask(task.id, el);
       }}
       className={[
-        "relative flex border-b border-neutral-100",
-        dragging ? "z-20 bg-white opacity-90 shadow" : "",
+        "relative flex border-b border-neutral-100 dark:border-neutral-900",
+        dragging ? "z-20 bg-white opacity-90 shadow dark:bg-neutral-950" : "",
       ].join(" ")}
     >
       {/* Left: grip + title (fallback) + the accumulated subtask checklist */}
       <div
-        className="row-cap sticky left-0 z-10 flex shrink-0 flex-col gap-0.5 bg-white py-1 pl-1 pr-2"
+        className="row-cap sticky left-0 z-10 flex shrink-0 flex-col gap-0.5 bg-white py-1 pl-1 pr-2 dark:bg-neutral-950"
         style={{ width: SIDEBAR_WIDTH, maxHeight: effHeight }}
       >
         <div className="flex items-start gap-1">
@@ -125,9 +126,9 @@ export default function TaskSubLane({
             <span
               onPointerDown={(e) => onTaskPointerDown(task, e)}
               title="Drag to reorder / move to another lane"
-              className="mt-[1px] w-3 shrink-0 cursor-grab select-none text-center text-[11px] text-neutral-300 hover:text-neutral-500 active:cursor-grabbing"
+              className="mt-[2px] flex w-3 shrink-0 cursor-grab select-none justify-center text-neutral-300 hover:text-neutral-500 active:cursor-grabbing dark:text-neutral-600 dark:hover:text-neutral-400"
             >
-              ⠿
+              <GripIcon className="h-3 w-3" />
             </span>
           ) : (
             <span className="w-3 shrink-0" />
@@ -141,7 +142,7 @@ export default function TaskSubLane({
             <button
               type="button"
               onClick={() => setTodosOpen((o) => !o)}
-              className="fs-12 flex min-w-0 flex-1 items-center gap-1 text-left font-medium leading-snug text-neutral-800"
+              className="fs-12 flex min-w-0 flex-1 items-center gap-1 text-left font-medium leading-snug text-neutral-800 dark:text-neutral-200"
               aria-expanded={todosOpen}
             >
               <span className="w-2 shrink-0 text-[8px] leading-none text-neutral-400">
@@ -150,7 +151,7 @@ export default function TaskSubLane({
               <span className="truncate">{task.title}</span>
             </button>
           ) : (
-            <span className="fs-12 min-w-0 flex-1 font-medium leading-snug text-neutral-800">
+            <span className="fs-12 min-w-0 flex-1 font-medium leading-snug text-neutral-800 dark:text-neutral-200">
               {task.title}
             </span>
           )}
@@ -197,7 +198,9 @@ export default function TaskSubLane({
                 transform: barOffset ? `translateX(${barOffset}px)` : undefined,
               }}
             >
-              <span className="fs-11 truncate font-medium text-neutral-900">{task.title}</span>
+              <span className="fs-11 truncate font-medium text-neutral-900 dark:text-neutral-50">
+                {task.title}
+              </span>
             </div>
           </div>
         )}

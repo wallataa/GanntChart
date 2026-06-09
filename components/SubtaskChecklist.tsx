@@ -27,7 +27,9 @@ export default function SubtaskChecklist({ subtasks, onToggle, className }: Subt
           <span
             className={[
               "fs-10 min-w-0 break-words",
-              s.done ? "text-neutral-400 line-through" : "text-neutral-700",
+              s.done
+                ? "text-neutral-400 line-through dark:text-neutral-500"
+                : "text-neutral-700 dark:text-neutral-300",
             ].join(" ")}
           >
             {s.title}

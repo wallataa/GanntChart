@@ -2,7 +2,7 @@
 
 import { useMemo, useState, type CSSProperties } from "react";
 import type { DateRange, ViewMode } from "@/types";
-import { defaultRange, shiftRange, weeklyRange } from "@/lib/dates";
+import { defaultRange, formatRangeLabel, shiftRange, weeklyRange } from "@/lib/dates";
 import { useGanttController } from "@/lib/useGanttController";
 import { useCalendarSync } from "@/lib/useCalendarSync";
 import { useViewSettings } from "@/lib/useViewSettings";
@@ -73,6 +73,7 @@ export default function Home() {
         onViewChange={changeView}
         onNavigateWeeks={navigateWeeks}
         onToday={goToday}
+        rangeLabel={formatRangeLabel(view === "weekly" ? weekRange : range)}
         onUndo={ctrl.undo}
         onRedo={ctrl.redo}
         canUndo={ctrl.canUndo}
@@ -84,10 +85,14 @@ export default function Home() {
         onHideEmptyLanesChange={settings.setHideEmptyLanes}
         activeColor={ctrl.activeColor}
         onApplyColor={ctrl.applyColor}
-        laneSelected={ctrl.selectedLaneId !== null}
+        selection={
+          ctrl.selectedLaneId ? "lane" : ctrl.interaction.selectedEventId ? "event" : null
+        }
         signedIn={calendar.signedIn}
         syncing={calendar.syncing}
         syncError={calendar.error}
+        theme={settings.theme}
+        onThemeChange={settings.setTheme}
         onOpenSettings={() => setSettingsOpen(true)}
       />
 

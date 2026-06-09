@@ -4,7 +4,7 @@ import type { PointerEvent as ReactPointerEvent } from "react";
 import type { Event, ResizeEdge, SwimLane } from "@/types";
 import { fillFor } from "@/lib/colors";
 import { fromISODate } from "@/lib/dates";
-import { format } from "date-fns";
+import { differenceInCalendarDays, format } from "date-fns";
 
 interface EventBlockProps {
   event: Event;
@@ -50,16 +50,20 @@ export default function EventBlock({
   const fill = fillFor(event.color ?? lane.color);
   const startLabel = format(fromISODate(event.start), "MMM d");
   const endLabel = format(fromISODate(event.end), "MMM d");
-  const range = event.start === event.end ? startLabel : `${startLabel} – ${endLabel}`;
+  const duration = differenceInCalendarDays(fromISODate(event.end), fromISODate(event.start)) + 1;
+  const range =
+    event.start === event.end ? startLabel : `${startLabel} – ${endLabel} · ${duration}d`;
   const editable = event.source === "manual";
 
   return (
     <div
       className={[
-        "group fs-10 pointer-events-auto relative m-[2px] flex items-center overflow-hidden rounded-[3px] border px-1 leading-tight text-neutral-800 select-none",
-        selected ? "border-blue-500 ring-2 ring-blue-400" : "border-black/10",
+        "group fs-10 pointer-events-auto relative m-[2px] flex items-center overflow-hidden rounded border px-1 leading-tight text-neutral-800 select-none",
+        selected ? "border-blue-500 shadow-sm ring-2 ring-blue-400" : "border-black/15",
         dragging ? "opacity-80 shadow-lg" : "",
-        editable && !editing ? "cursor-grab active:cursor-grabbing hover:brightness-95" : "",
+        editable && !editing
+          ? "cursor-grab hover:shadow-sm hover:brightness-95 active:cursor-grabbing"
+          : "",
       ].join(" ")}
       style={{
         gridColumn: `${colStart} / span ${span}`,

@@ -5,6 +5,7 @@ import type { Event, GridInteraction, Subtask, SwimLane } from "@/types";
 import { confirmDeleteLane, isLifeLane } from "@/lib/lanes";
 import { fillFor } from "@/lib/colors";
 import SubtaskChecklist from "./SubtaskChecklist";
+import { CalendarIcon, GripIcon, LockIcon, XIcon } from "./icons";
 
 interface SidebarProps {
   lane: SwimLane;
@@ -85,7 +86,7 @@ export default function Sidebar({
 
   return (
     <div
-      className="sticky left-0 z-10 flex shrink-0 border-b border-neutral-200 bg-white"
+      className="sticky left-0 z-10 flex shrink-0 border-b border-neutral-200 bg-white dark:border-neutral-800 dark:bg-neutral-950"
       style={{
         width: "var(--sb-w, 316px)",
         // Lane-color tint composited over the opaque white base so the sticky
@@ -97,24 +98,24 @@ export default function Sidebar({
       {/* Drag handle — grab to reorder the whole lane (Life lane is locked) */}
       {life ? (
         <div
-          className="absolute left-0 top-0 z-10 flex h-full w-4 items-center justify-center text-[10px] text-neutral-300"
+          className="absolute left-0 top-0 z-10 flex h-full w-4 items-center justify-center text-neutral-300 dark:text-neutral-600"
           title="Life lane is locked"
         >
-          🔒
+          <LockIcon className="h-3 w-3" />
         </div>
       ) : (
         <div
           onPointerDown={(e) => onLanePointerDown(lane.id, e)}
           title="Drag to move lane"
-          className="absolute left-0 top-0 z-10 flex h-full w-4 cursor-grab select-none items-center justify-center text-neutral-300 hover:bg-neutral-100 hover:text-neutral-500 active:cursor-grabbing"
+          className="absolute left-0 top-0 z-10 flex h-full w-4 cursor-grab select-none items-center justify-center text-neutral-300 hover:bg-neutral-100 hover:text-neutral-500 active:cursor-grabbing dark:text-neutral-600 dark:hover:bg-neutral-800 dark:hover:text-neutral-400"
         >
-          ⠿
+          <GripIcon className="h-3.5 w-3.5" />
         </div>
       )}
 
       {/* Column A — notes */}
       <div
-        className="fs-11 shrink-0 py-1.5 pl-5 pr-2 leading-snug text-neutral-700"
+        className="fs-11 shrink-0 py-1.5 pl-5 pr-2 leading-snug text-neutral-700 dark:text-neutral-300"
         style={{ width: "var(--sb-notes, 196px)" }}
       >
         {editingNotes ? (
@@ -132,13 +133,13 @@ export default function Sidebar({
             }}
             placeholder="One note per line"
             rows={Math.max(2, notesDraft.split("\n").length)}
-            className="fs-11 w-full resize-none rounded border border-blue-300 p-1 outline-none"
+            className="fs-11 w-full resize-none rounded border border-blue-300 p-1 outline-none dark:border-blue-700 dark:bg-neutral-900"
           />
         ) : (
           <button
             type="button"
             onClick={() => setEditingNotes(true)}
-            className="block w-full cursor-text rounded text-left hover:bg-neutral-50"
+            className="block w-full cursor-text rounded text-left hover:bg-neutral-50 dark:hover:bg-neutral-900"
             aria-label={`Edit notes for ${lane.label}`}
           >
             {lane.notes.length > 0 ? (
@@ -148,14 +149,14 @@ export default function Sidebar({
                 ))}
               </ul>
             ) : (
-              <span className="text-neutral-300">+ notes</span>
+              <span className="text-neutral-300 dark:text-neutral-600">+ notes</span>
             )}
           </button>
         )}
 
         {/* Accumulated to-do list (subtasks from the weekly view), grouped by task */}
         {taskGroups.length > 0 && (
-          <div className="mt-2 space-y-1 border-t border-neutral-100 pt-1.5">
+          <div className="mt-2 space-y-1 border-t border-neutral-100 pt-1.5 dark:border-neutral-800">
             {taskGroups.map(({ task, subs }) => {
               const open = !collapsedTodos.has(task.id);
               return (
@@ -163,7 +164,7 @@ export default function Sidebar({
                 <button
                   type="button"
                   onClick={() => toggleTodo(task.id)}
-                  className="fs-10 flex w-full items-center gap-1 text-left font-semibold text-neutral-500 hover:text-neutral-700"
+                  className="fs-10 flex w-full items-center gap-1 text-left font-semibold text-neutral-500 hover:text-neutral-700 dark:text-neutral-400 dark:hover:text-neutral-200"
                   aria-expanded={open}
                 >
                   <span className="w-2 shrink-0 text-[8px] leading-none text-neutral-400">
@@ -191,7 +192,7 @@ export default function Sidebar({
           "group/label relative flex shrink-0 items-center justify-center border-l px-1 text-center",
           interaction.selectedLaneId === lane.id
             ? "border-blue-500 ring-2 ring-inset ring-blue-400"
-            : "border-neutral-200",
+            : "border-neutral-200 dark:border-neutral-700",
         ].join(" ")}
         style={{
           width: "var(--sb-label, 120px)",
@@ -211,9 +212,9 @@ export default function Sidebar({
             }}
             title={`Delete ${lane.label}`}
             aria-label={`Delete ${lane.label}`}
-            className="absolute right-0.5 top-0.5 z-10 rounded px-1 text-[11px] leading-none text-neutral-400 opacity-0 hover:bg-white/60 hover:text-red-600 focus:opacity-100 group-hover/label:opacity-100"
+            className="absolute right-0.5 top-0.5 z-10 rounded p-0.5 text-neutral-400 opacity-0 hover:bg-white/60 hover:text-red-600 focus:opacity-100 group-hover/label:opacity-100 dark:hover:bg-black/40 dark:hover:text-red-400"
           >
-            ✕
+            <XIcon className="h-3 w-3" />
           </button>
         )}
         {editingLabel ? (
@@ -229,7 +230,7 @@ export default function Sidebar({
                 setEditingLabel(false);
               }
             }}
-            className="fs-14 w-full rounded border border-blue-300 px-1 py-0.5 text-center outline-none"
+            className="fs-14 w-full rounded border border-blue-300 px-1 py-0.5 text-center outline-none dark:border-blue-700 dark:bg-neutral-900"
           />
         ) : (
           <button
@@ -238,11 +239,11 @@ export default function Sidebar({
             onDoubleClick={() => setEditingLabel(true)}
             title="Click to select (recolor); double-click to rename"
             className={[
-              "fs-14 flex w-full items-center justify-center gap-1 rounded py-1 font-medium hover:bg-black/5",
-              life ? "text-teal-800" : "text-neutral-800",
+              "fs-14 flex w-full items-center justify-center gap-1 rounded py-1 font-medium hover:bg-black/5 dark:hover:bg-white/10",
+              life ? "text-teal-800 dark:text-teal-300" : "text-neutral-800 dark:text-neutral-100",
             ].join(" ")}
           >
-            {life && <span aria-hidden>🗓️</span>}
+            {life && <CalendarIcon className="h-3.5 w-3.5 shrink-0" />}
             {lane.label}
           </button>
         )}

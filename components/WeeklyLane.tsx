@@ -15,6 +15,7 @@ import { confirmDeleteLane, isLifeLane } from "@/lib/lanes";
 import { packEvents } from "@/lib/events";
 import TaskSubLane from "./TaskSubLane";
 import DayColumns from "./DayColumns";
+import { CalendarIcon, GripIcon, LockIcon, XIcon } from "./icons";
 
 interface WeeklyLaneProps {
   lane: SwimLane;
@@ -89,40 +90,46 @@ export default function WeeklyLane({
   return (
     <div
       ref={(el) => registerLane(lane.id, el)}
-      className={laneDragging ? "relative z-20 bg-white opacity-90 shadow-md" : ""}
+      className={
+        laneDragging ? "relative z-20 bg-white opacity-90 shadow-md dark:bg-neutral-950" : ""
+      }
     >
       {/* Lane header band (with reorder grip) */}
-      <div className="flex border-b border-neutral-300">
+      <div className="flex border-b border-neutral-300 dark:border-neutral-700">
         <div
           className={[
-            "fs-14 sticky left-0 z-10 flex shrink-0 items-center gap-1 py-1 pl-1 pr-2 font-semibold text-neutral-800",
+            "fs-14 sticky left-0 z-10 flex shrink-0 items-center gap-1 bg-white py-1 pl-1 pr-2 font-semibold text-neutral-800 dark:bg-neutral-950 dark:text-neutral-100",
             selected ? "ring-2 ring-inset ring-blue-400" : "",
           ].join(" ")}
           style={{
             width: SIDEBAR_WIDTH,
-            backgroundColor: life ? "rgba(168,230,208,0.35)" : `${fillFor(lane.color)}66`,
+            // Tint composited over the opaque base (bg-white / dark) so the
+            // sticky header masks scrolled content in both themes.
+            backgroundImage: life
+              ? "linear-gradient(rgba(168,230,208,0.35), rgba(168,230,208,0.35))"
+              : `linear-gradient(${fillFor(lane.color)}66, ${fillFor(lane.color)}66)`,
           }}
         >
           {life ? (
-            <span className="w-4 text-center text-[10px] text-neutral-400" title="Locked">
-              🔒
+            <span className="flex w-4 justify-center text-neutral-400" title="Locked">
+              <LockIcon className="h-3 w-3" />
             </span>
           ) : (
             <span
               onPointerDown={(e) => onLanePointerDown(lane.id, e)}
               title="Drag to reorder lane"
-              className="w-4 cursor-grab select-none text-center text-neutral-400 hover:text-neutral-600 active:cursor-grabbing"
+              className="flex w-4 cursor-grab select-none justify-center text-neutral-400 hover:text-neutral-600 active:cursor-grabbing dark:hover:text-neutral-300"
             >
-              ⠿
+              <GripIcon className="h-3.5 w-3.5" />
             </span>
           )}
-          {life && <span aria-hidden>🗓️</span>}
+          {life && <CalendarIcon className="h-3.5 w-3.5 shrink-0" />}
           {/* Click the label to select the lane (recolor via the toolbar Fill). */}
           <button
             type="button"
             onClick={() => onSelectLane(lane.id)}
             title="Click to select this lane (recolor)"
-            className="min-w-0 flex-1 truncate text-left hover:text-blue-700"
+            className="min-w-0 flex-1 truncate text-left hover:text-blue-700 dark:hover:text-blue-400"
           >
             {lane.label}
           </button>
@@ -135,9 +142,9 @@ export default function WeeklyLane({
               }}
               title={`Delete ${lane.label}`}
               aria-label={`Delete ${lane.label}`}
-              className="shrink-0 px-1 text-xs font-normal text-neutral-400 hover:text-red-600"
+              className="shrink-0 px-1 text-neutral-400 hover:text-red-600 dark:hover:text-red-400"
             >
-              ✕
+              <XIcon className="h-3 w-3" />
             </button>
           )}
         </div>
@@ -148,9 +155,9 @@ export default function WeeklyLane({
               <div
                 key={iso}
                 className={[
-                  "border-l border-neutral-200",
-                  isWeekend(d) ? "bg-neutral-100" : "",
-                  isToday(d) ? "bg-blue-50/60" : "",
+                  "border-l border-neutral-200 dark:border-neutral-800",
+                  isWeekend(d) ? "bg-neutral-100 dark:bg-neutral-900" : "",
+                  isToday(d) ? "bg-blue-50/60 dark:bg-blue-500/10" : "",
                 ].join(" ")}
               />
             );
@@ -160,9 +167,9 @@ export default function WeeklyLane({
 
       {/* Life lane: single stacked band of read-only GCal events (like main view) */}
       {life && lifePack ? (
-        <div className="flex border-b border-neutral-100">
+        <div className="flex border-b border-neutral-100 dark:border-neutral-900">
           <div
-            className="sticky left-0 z-10 shrink-0 bg-white"
+            className="sticky left-0 z-10 shrink-0 bg-white dark:bg-neutral-950"
             style={{
               width: SIDEBAR_WIDTH,
               backgroundImage: `linear-gradient(${fillFor(lane.color)}22, ${fillFor(lane.color)}22)`,
@@ -213,9 +220,9 @@ export default function WeeklyLane({
           />
         ))
       ) : (
-        <div className="flex border-b border-neutral-100">
+        <div className="flex border-b border-neutral-100 dark:border-neutral-900">
           <div
-            className="fs-11 sticky left-0 z-10 shrink-0 bg-white py-1 pl-7 pr-2 italic text-neutral-300"
+            className="fs-10 sticky left-0 z-10 shrink-0 bg-white py-0.5 pl-7 pr-2 text-neutral-300 dark:bg-neutral-950 dark:text-neutral-600"
             style={{ width: SIDEBAR_WIDTH }}
           >
             no tasks this fortnight
@@ -225,8 +232,8 @@ export default function WeeklyLane({
               <div
                 key={toISODate(d)}
                 className={[
-                  "min-h-[24px] border-l border-neutral-200",
-                  isWeekend(d) ? "bg-neutral-50" : "",
+                  "min-h-[16px] border-l border-neutral-200 dark:border-neutral-800",
+                  isWeekend(d) ? "bg-neutral-50 dark:bg-neutral-900/60" : "",
                 ].join(" ")}
               />
             ))}

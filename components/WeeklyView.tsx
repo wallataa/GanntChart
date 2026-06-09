@@ -160,7 +160,7 @@ export default function WeeklyView({
   const visibleLanes = orderedLanes.filter((lane) => !hideEmptyLanes || laneHasContent(lane));
 
   return (
-    <div className="gantt-scroll h-full overflow-auto border border-neutral-300">
+    <div className="gantt-scroll h-full overflow-auto border border-neutral-300 dark:border-neutral-700">
       <div className="w-max min-w-full">
         <DateHeader
           range={range}
@@ -195,12 +195,12 @@ export default function WeeklyView({
         ))}
 
         {/* Add-lane footer row (sticky to the left like the lane headers). */}
-        <div className="flex border-b border-neutral-300">
+        <div className="flex border-b border-neutral-300 dark:border-neutral-700">
           <button
             type="button"
             onClick={onAddLane}
             style={{ width: "var(--sb-w, 316px)" }}
-            className="fs-11 sticky left-0 z-10 shrink-0 bg-white py-1.5 pl-7 text-left text-neutral-500 hover:bg-neutral-50 hover:text-neutral-700"
+            className="fs-11 sticky left-0 z-10 shrink-0 bg-white py-1.5 pl-7 text-left text-neutral-500 hover:bg-neutral-50 hover:text-neutral-700 dark:bg-neutral-950 dark:text-neutral-400 dark:hover:bg-neutral-800 dark:hover:text-neutral-200"
           >
             + Add lane
           </button>

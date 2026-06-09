@@ -1,11 +1,12 @@
 import type { DateRange } from "@/types";
-import { daysInRange, isToday, isWeekend, toISODate } from "@/lib/dates";
+import { daysInRange, isMonthStart, isToday, isWeekend, toISODate } from "@/lib/dates";
 
 /**
  * Absolute-positioned background layer of day columns: per-column left border
- * plus weekend / today tints. Non-interactive (pointer-events-none) so clicks
- * fall through to the track. Shared by the main lanes, the weekly Life band,
- * and weekly task rows.
+ * (stronger on month boundaries), weekend / today tints, and a vertical accent
+ * line marking today. Non-interactive (pointer-events-none) so clicks fall
+ * through to the track. Shared by the main lanes, the weekly Life band, and
+ * weekly task rows.
  */
 export default function DayColumns({
   range,
@@ -24,11 +25,16 @@ export default function DayColumns({
         <div
           key={toISODate(d)}
           className={[
-            "border-l border-neutral-200",
-            isWeekend(d) ? "bg-neutral-100" : "",
-            isToday(d) ? "bg-blue-50/60" : "",
+            "relative border-l",
+            isMonthStart(d)
+              ? "border-neutral-400 dark:border-neutral-500"
+              : "border-neutral-200 dark:border-neutral-800",
+            isWeekend(d) ? "bg-neutral-100 dark:bg-neutral-900" : "",
+            isToday(d) ? "bg-blue-50/60 dark:bg-blue-500/10" : "",
           ].join(" ")}
-        />
+        >
+          {isToday(d) && <span className="absolute inset-y-0 -left-px w-[2px] bg-blue-500/70" />}
+        </div>
       ))}
     </div>
   );

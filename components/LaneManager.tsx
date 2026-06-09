@@ -4,6 +4,7 @@ import { useState } from "react";
 import type { ColorName, SwimLane } from "@/types";
 import { COLOR_NAMES, PALETTE } from "@/lib/colors";
 import { isLifeLane } from "@/lib/lanes";
+import { GripIcon, LockIcon, XIcon } from "./icons";
 
 interface LaneManagerProps {
   lanes: SwimLane[];
@@ -63,7 +64,9 @@ export default function LaneManager({
               onDragEnd={() => setDragIndex(null)}
               className={[
                 "rounded border px-2 py-1.5",
-                locked ? "border-teal-200 bg-teal-50/40" : "border-neutral-200 bg-white",
+                locked
+                  ? "border-teal-200 bg-teal-50/40 dark:border-teal-900 dark:bg-teal-950/40"
+                  : "border-neutral-200 bg-white dark:border-neutral-700 dark:bg-neutral-900",
                 dragIndex === i ? "opacity-50" : "",
               ].join(" ")}
             >
@@ -76,7 +79,7 @@ export default function LaneManager({
                   ].join(" ")}
                   title={locked ? "Life lane is locked" : "Drag to reorder"}
                 >
-                  {locked ? "🔒" : "⠿"}
+                  {locked ? <LockIcon className="h-3.5 w-3.5" /> : <GripIcon className="h-3.5 w-3.5" />}
                 </span>
 
                 {/* Color swatch toggle */}
@@ -94,7 +97,7 @@ export default function LaneManager({
                   type="text"
                   value={lane.label}
                   onChange={(e) => onRename(lane.id, e.target.value)}
-                  className="min-w-0 flex-1 rounded border border-transparent bg-transparent px-1 py-0.5 text-sm hover:border-neutral-200 focus:border-blue-400 focus:bg-white focus:outline-none"
+                  className="min-w-0 flex-1 rounded border border-transparent bg-transparent px-1 py-0.5 text-sm hover:border-neutral-200 focus:border-blue-400 focus:bg-white focus:outline-none dark:hover:border-neutral-700 dark:focus:bg-neutral-800"
                 />
 
                 {/* Reorder buttons (accessible fallback to drag) */}
@@ -104,7 +107,7 @@ export default function LaneManager({
                       type="button"
                       onClick={() => onReorder(i, i - 1)}
                       disabled={i === 0}
-                      className="px-1 text-neutral-400 hover:text-neutral-700 disabled:opacity-30"
+                      className="px-1 text-neutral-400 hover:text-neutral-700 disabled:opacity-30 dark:hover:text-neutral-200"
                       aria-label="Move up"
                     >
                       ▲
@@ -113,7 +116,7 @@ export default function LaneManager({
                       type="button"
                       onClick={() => onReorder(i, i + 1)}
                       disabled={i >= lastMovable}
-                      className="px-1 text-neutral-400 hover:text-neutral-700 disabled:opacity-30"
+                      className="px-1 text-neutral-400 hover:text-neutral-700 disabled:opacity-30 dark:hover:text-neutral-200"
                       aria-label="Move down"
                     >
                       ▼
@@ -124,7 +127,7 @@ export default function LaneManager({
                       className="px-1 text-red-400 hover:text-red-600"
                       aria-label={`Delete ${lane.label}`}
                     >
-                      ✕
+                      <XIcon className="h-3.5 w-3.5" />
                     </button>
                   </>
                 )}
@@ -162,7 +165,7 @@ export default function LaneManager({
       <button
         type="button"
         onClick={onAdd}
-        className="w-full rounded border border-dashed border-neutral-300 px-2 py-1.5 text-sm text-neutral-600 hover:bg-neutral-50"
+        className="w-full rounded border border-dashed border-neutral-300 px-2 py-1.5 text-sm text-neutral-600 hover:bg-neutral-50 dark:border-neutral-700 dark:text-neutral-300 dark:hover:bg-neutral-800"
       >
         + Add lane
       </button>

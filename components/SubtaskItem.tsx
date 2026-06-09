@@ -41,7 +41,9 @@ export default function SubtaskItem({ subtask, editing, interaction }: SubtaskIt
           onClick={() => interaction.onStartEdit(subtask.id)}
           className={[
             "min-w-0 flex-1 cursor-text break-words text-left",
-            subtask.done ? "text-neutral-400 line-through" : "text-neutral-800",
+            subtask.done
+              ? "text-neutral-400 line-through dark:text-neutral-500"
+              : "text-neutral-800 dark:text-neutral-200",
           ].join(" ")}
         >
           {subtask.title}

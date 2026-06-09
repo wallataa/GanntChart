@@ -1,7 +1,15 @@
 "use client";
 
-import { COLUMN_WIDTH, SIDEBAR_LABEL_WIDTH, SIDEBAR_NOTES_WIDTH } from "./dates";
+import { useEffect } from "react";
+import {
+  COLUMN_WIDTH,
+  SIDEBAR_LABEL_WIDTH,
+  SIDEBAR_NOTES_WIDTH,
+  WEEK_COLUMN_WIDTH,
+} from "./dates";
 import { usePersistedState } from "./usePersistedState";
+
+export type Theme = "light" | "dark";
 
 const clamp = (min: number, max: number) => (v: number) =>
   Math.max(min, Math.min(max, Math.round(v)));
@@ -27,6 +35,9 @@ export interface ViewSettings {
   /** Weekly view: hide lanes with nothing in the visible fortnight. */
   hideEmptyLanes: boolean;
   setHideEmptyLanes: (hide: boolean) => void;
+  /** Color theme. Applied as a `dark` class on <html> (Tailwind class mode). */
+  theme: Theme;
+  setTheme: (theme: Theme) => void;
 }
 
 /**
@@ -41,7 +52,7 @@ export function useViewSettings(): ViewSettings {
   );
   const [weekColumnWidth, setWeekColumnWidth] = usePersistedState(
     "gantt:weekColWidth",
-    COLUMN_WIDTH,
+    WEEK_COLUMN_WIDTH,
     clampColWidth,
   );
   const [fontScale, setFontScale] = usePersistedState("gantt:fontScale", 1, clampFontScale);
@@ -56,6 +67,16 @@ export function useViewSettings(): ViewSettings {
     clampLabelWidth,
   );
   const [hideEmptyLanes, setHideEmptyLanes] = usePersistedState("gantt:hideEmptyWeekly", false);
+  const [theme, setTheme] = usePersistedState<Theme>("gantt:theme", "light", (t) =>
+    t === "dark" ? "dark" : "light",
+  );
+
+  // Mirror the theme onto <html> so Tailwind `dark:` variants apply everywhere
+  // (a pre-hydration script in layout.tsx sets the initial class to avoid a
+  // flash of the wrong theme).
+  useEffect(() => {
+    document.documentElement.classList.toggle("dark", theme === "dark");
+  }, [theme]);
 
   const setSidebarWidth = (part: "notes" | "label", w: number) =>
     part === "notes" ? setSidebarNotesWidth(w) : setSidebarLabelWidth(w);
@@ -72,5 +93,7 @@ export function useViewSettings(): ViewSettings {
     setSidebarWidth,
     hideEmptyLanes,
     setHideEmptyLanes,
+    theme,
+    setTheme,
   };
 }

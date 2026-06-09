@@ -155,7 +155,7 @@ export default function SwimLaneRow({
     <div
       className={[
         "relative flex transition-shadow",
-        laneDragging ? "z-20 bg-white opacity-90 shadow-md" : "",
+        laneDragging ? "z-20 bg-white opacity-90 shadow-md dark:bg-neutral-950" : "",
       ].join(" ")}
     >
       <Sidebar
@@ -177,7 +177,7 @@ export default function SwimLaneRow({
         }}
         onPointerDown={life ? undefined : beginCreate}
         className={[
-          "relative flex-1 border-b border-neutral-200",
+          "group/track relative flex-1 border-b border-neutral-200 dark:border-neutral-800",
           life ? "" : "cursor-text",
         ].join(" ")}
         style={{
@@ -187,6 +187,13 @@ export default function SwimLaneRow({
         }}
       >
         <DayColumns range={range} columnWidth={columnWidth} />
+
+        {/* Discoverability: empty lanes hint at draw-to-create on hover. */}
+        {!life && events.length === 0 && !createPreview && (
+          <span className="fs-10 pointer-events-none absolute inset-y-0 left-2 flex items-center text-neutral-400 opacity-0 transition-opacity group-hover/track:opacity-100 dark:text-neutral-500">
+            drag across days to create an event
+          </span>
+        )}
 
         {/* Foreground: event blocks (defines row height). pointer-events-none so
             empty space falls through to the track click handler; children re-enable. */}

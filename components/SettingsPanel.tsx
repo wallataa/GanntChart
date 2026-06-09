@@ -3,6 +3,7 @@
 import { signIn, signOut, useSession } from "next-auth/react";
 import type { CalendarSource, ColorName, SwimLane } from "@/types";
 import LaneManager from "./LaneManager";
+import { XIcon } from "./icons";
 
 interface SettingsPanelProps {
   open: boolean;
@@ -47,40 +48,40 @@ export default function SettingsPanel({
   return (
     <div className="fixed inset-0 z-40" role="dialog" aria-modal="true">
       {/* Backdrop */}
-      <div className="absolute inset-0 bg-black/30" onClick={onClose} />
+      <div className="anim-fade absolute inset-0 bg-black/30" onClick={onClose} />
 
       {/* Panel */}
-      <aside className="absolute right-0 top-0 flex h-full w-80 flex-col bg-white shadow-xl">
-        <header className="flex items-center justify-between border-b border-neutral-200 px-4 py-3">
+      <aside className="anim-slide-in absolute right-0 top-0 flex h-full w-80 flex-col bg-white shadow-xl dark:bg-neutral-900">
+        <header className="flex items-center justify-between border-b border-neutral-200 px-4 py-3 dark:border-neutral-700">
           <h2 className="text-sm font-semibold">Settings</h2>
           <button
             type="button"
             onClick={onClose}
-            className="rounded p-1 text-neutral-500 hover:bg-neutral-100"
+            className="rounded p-1 text-neutral-500 hover:bg-neutral-100 dark:text-neutral-400 dark:hover:bg-neutral-800"
             aria-label="Close settings"
           >
-            ✕
+            <XIcon />
           </button>
         </header>
 
         <div className="flex-1 space-y-6 overflow-y-auto p-4">
           {/* Google account */}
           <section>
-            <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-neutral-500">
+            <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-neutral-500 dark:text-neutral-400">
               Google Calendar
             </h3>
             {status === "loading" ? (
-              <p className="text-sm text-neutral-500">Checking session…</p>
+              <p className="text-sm text-neutral-500 dark:text-neutral-400">Checking session…</p>
             ) : session ? (
               <div className="space-y-2">
-                <p className="text-sm text-neutral-700">
+                <p className="text-sm text-neutral-700 dark:text-neutral-300">
                   Signed in as{" "}
                   <span className="font-medium">{session.user?.email}</span>
                 </p>
                 <button
                   type="button"
                   onClick={() => signOut()}
-                  className="rounded border border-neutral-300 px-3 py-1.5 text-sm hover:bg-neutral-50"
+                  className="rounded border border-neutral-300 px-3 py-1.5 text-sm hover:bg-neutral-50 dark:border-neutral-700 dark:hover:bg-neutral-800"
                 >
                   Sign out
                 </button>
@@ -99,11 +100,11 @@ export default function SettingsPanel({
           {/* Calendar sources */}
           {session && (
             <section>
-              <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-neutral-500">
+              <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-neutral-500 dark:text-neutral-400">
                 Calendars in “Life” lane
               </h3>
               {calendars.length === 0 ? (
-                <p className="text-sm text-neutral-500">No calendars loaded yet.</p>
+                <p className="text-sm text-neutral-500 dark:text-neutral-400">No calendars loaded yet.</p>
               ) : (
                 <ul className="space-y-1">
                   {calendars.map((cal) => (
@@ -116,7 +117,7 @@ export default function SettingsPanel({
                       />
                       <label
                         htmlFor={`cal-${cal.id}`}
-                        className="flex flex-1 items-center gap-2 text-sm text-neutral-700"
+                        className="flex flex-1 items-center gap-2 text-sm text-neutral-700 dark:text-neutral-300"
                       >
                         <span
                           className="inline-block h-3 w-3 shrink-0 rounded-sm"
@@ -138,7 +139,7 @@ export default function SettingsPanel({
 
           {/* Swim-lane management */}
           <section>
-            <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-neutral-500">
+            <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-neutral-500 dark:text-neutral-400">
               Swim lanes
             </h3>
             <LaneManager
@@ -153,7 +154,7 @@ export default function SettingsPanel({
 
           {/* Danger zone: wipe all user data. */}
           <section>
-            <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-neutral-500">
+            <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-neutral-500 dark:text-neutral-400">
               Data
             </h3>
             <button
@@ -167,7 +168,7 @@ export default function SettingsPanel({
                   onClearAll();
                 }
               }}
-              className="w-full rounded border border-red-300 px-3 py-1.5 text-sm font-medium text-red-600 hover:bg-red-50"
+              className="w-full rounded border border-red-300 px-3 py-1.5 text-sm font-medium text-red-600 hover:bg-red-50 dark:border-red-900 dark:text-red-400 dark:hover:bg-red-950"
             >
               Clear all data
             </button>

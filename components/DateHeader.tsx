@@ -8,6 +8,7 @@ import {
   dayAbbrev,
   dayNumber,
   daysInRange,
+  isMonthStart,
   isToday,
   isWeekend,
   monthGroups,
@@ -62,17 +63,17 @@ export default function DateHeader({
   };
 
   return (
-    <div className="sticky top-0 z-20 bg-white">
+    <div className="sticky top-0 z-20 bg-white dark:bg-neutral-950">
       {/* Month row */}
-      <div className="flex border-b border-neutral-200">
+      <div className="flex border-b border-neutral-200 dark:border-neutral-800">
         <div
-          className="sticky left-0 z-10 shrink-0 bg-white"
+          className="sticky left-0 z-10 shrink-0 bg-white dark:bg-neutral-950"
           style={{ width: SIDEBAR_VAR }}
         />
         {groups.map((g) => (
           <div
             key={g.label}
-            className="fs-12 shrink-0 border-l border-neutral-200 px-2 py-1 font-semibold text-neutral-600"
+            className="fs-12 shrink-0 border-l border-neutral-200 px-2 py-1 font-semibold text-neutral-600 dark:border-neutral-800 dark:text-neutral-300"
             style={{ width: g.span * columnWidth }}
           >
             {g.label}
@@ -81,9 +82,9 @@ export default function DateHeader({
       </div>
 
       {/* Day-of-week + date number rows */}
-      <div className="flex border-b border-neutral-300">
+      <div className="flex border-b border-neutral-300 dark:border-neutral-700">
         <div
-          className="sticky left-0 z-10 shrink-0 bg-white"
+          className="sticky left-0 z-10 shrink-0 bg-white dark:bg-neutral-950"
           style={{ width: SIDEBAR_VAR }}
         >
           {/* Drag the left columns' edges to resize them. */}
@@ -110,20 +111,35 @@ export default function DateHeader({
             <div
               key={toISODate(d)}
               className={[
-                "relative shrink-0 border-l border-neutral-200 text-center",
-                weekend ? "bg-neutral-100" : "bg-white",
-                today ? "ring-2 ring-inset ring-blue-400" : "",
+                "relative shrink-0 border-l text-center",
+                isMonthStart(d)
+                  ? "border-neutral-400 dark:border-neutral-500"
+                  : "border-neutral-200 dark:border-neutral-800",
+                weekend ? "bg-neutral-100 dark:bg-neutral-900" : "bg-white dark:bg-neutral-950",
               ].join(" ")}
               style={{ width: columnWidth }}
             >
-              <div className="fs-10 pt-1 font-medium text-neutral-500">{dayAbbrev(d)}</div>
               <div
                 className={[
-                  "fs-12 pb-1",
-                  today ? "font-bold text-blue-600" : "text-neutral-700",
+                  "fs-10 pt-1 font-medium",
+                  today
+                    ? "text-blue-600 dark:text-blue-400"
+                    : "text-neutral-500 dark:text-neutral-400",
                 ].join(" ")}
               >
-                {dayNumber(d)}
+                {dayAbbrev(d)}
+              </div>
+              {/* Today gets a filled pill so it anchors the whole grid. */}
+              <div className="fs-12 pb-1">
+                <span
+                  className={
+                    today
+                      ? "inline-block min-w-[1.6em] rounded-full bg-blue-600 px-1 font-bold leading-snug text-white"
+                      : "text-neutral-700 dark:text-neutral-300"
+                  }
+                >
+                  {dayNumber(d)}
+                </span>
               </div>
               {/* Drag the right edge to resize all columns. */}
               {onColumnWidthChange && (
