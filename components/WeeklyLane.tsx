@@ -14,6 +14,7 @@ import { fillFor } from "@/lib/colors";
 import { isLifeLane } from "@/lib/lanes";
 import { packEvents } from "@/lib/events";
 import TaskSubLane from "./TaskSubLane";
+import DayColumns from "./DayColumns";
 
 interface WeeklyLaneProps {
   lane: SwimLane;
@@ -37,6 +38,8 @@ interface WeeklyLaneProps {
   selected: boolean;
   onSelectLane: (laneId: string | null) => void;
   onToggleSubtask: (subtaskId: string) => void;
+  /** Delete this lane and its events (Life lane is locked). */
+  onDeleteLane: (id: string) => void;
 }
 
 /** Combined left-column width (notes + label), driven by the `--sb-w` CSS var. */
@@ -61,10 +64,12 @@ export default function WeeklyLane({
   selected,
   onSelectLane,
   onToggleSubtask,
+  onDeleteLane,
 }: WeeklyLaneProps) {
   const days = daysInRange(range);
   const columns = `repeat(${days.length}, ${columnWidth}px)`;
   const life = isLifeLane(lane);
+  const laneEventCount = events.filter((e) => e.laneId === lane.id).length;
 
   // Show a task if it overlaps the window OR has a subtask landing in the window.
   const tasks = events
@@ -121,6 +126,25 @@ export default function WeeklyLane({
           >
             {lane.label}
           </button>
+          {/* Delete this lane (and its events); confirms when not empty. */}
+          {!life && (
+            <button
+              type="button"
+              onClick={() => {
+                if (
+                  laneEventCount === 0 ||
+                  window.confirm(`Delete "${lane.label}" and its ${laneEventCount} event(s)?`)
+                ) {
+                  onDeleteLane(lane.id);
+                }
+              }}
+              title={`Delete ${lane.label}`}
+              aria-label={`Delete ${lane.label}`}
+              className="shrink-0 px-1 text-xs font-normal text-neutral-400 hover:text-red-600"
+            >
+              ✕
+            </button>
+          )}
         </div>
         <div className="grid flex-1" style={{ gridTemplateColumns: columns }}>
           {days.map((d) => {
@@ -150,18 +174,7 @@ export default function WeeklyLane({
             }}
           />
           <div className="relative flex-1">
-            <div className="absolute inset-0 grid" style={{ gridTemplateColumns: columns }}>
-              {days.map((d) => (
-                <div
-                  key={toISODate(d)}
-                  className={[
-                    "border-l border-neutral-200",
-                    isWeekend(d) ? "bg-neutral-50" : "",
-                    isToday(d) ? "bg-blue-50/50" : "",
-                  ].join(" ")}
-                />
-              ))}
-            </div>
+            <DayColumns range={range} columnWidth={columnWidth} />
             <div
               className="row-cap relative grid gap-y-px py-px"
               style={{

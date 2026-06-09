@@ -1,4 +1,5 @@
 import type { SwimLane } from "@/types";
+import { loadJSON, saveJSON } from "./storage";
 
 export const LANES_STORAGE_KEY = "gantt:lanes";
 
@@ -77,30 +78,17 @@ export const DEFAULT_LANES: SwimLane[] = [
 
 /** Read lanes from localStorage, falling back to defaults (SSR-safe). */
 export function loadLanes(): SwimLane[] {
-  if (typeof window === "undefined") return DEFAULT_LANES;
-  try {
-    const raw = window.localStorage.getItem(LANES_STORAGE_KEY);
-    if (!raw) return DEFAULT_LANES;
-    const parsed = JSON.parse(raw) as SwimLane[];
-    if (!Array.isArray(parsed) || parsed.length === 0) return DEFAULT_LANES;
-    // Guarantee exactly one locked Life lane exists, pinned to the end.
-    const withoutLife = parsed.filter((l) => !l.isLifeLane);
-    const life = parsed.find((l) => l.isLifeLane) ??
-      DEFAULT_LANES.find((l) => l.isLifeLane)!;
-    return [...withoutLife, life];
-  } catch {
-    return DEFAULT_LANES;
-  }
+  const parsed = loadJSON<SwimLane[] | null>(LANES_STORAGE_KEY, null);
+  if (!Array.isArray(parsed) || parsed.length === 0) return DEFAULT_LANES;
+  // Guarantee exactly one locked Life lane exists, pinned to the end.
+  const withoutLife = parsed.filter((l) => !l.isLifeLane);
+  const life = parsed.find((l) => l.isLifeLane) ?? DEFAULT_LANES.find((l) => l.isLifeLane)!;
+  return [...withoutLife, life];
 }
 
 /** Persist lanes to localStorage. No-op during SSR. */
 export function saveLanes(lanes: SwimLane[]): void {
-  if (typeof window === "undefined") return;
-  try {
-    window.localStorage.setItem(LANES_STORAGE_KEY, JSON.stringify(lanes));
-  } catch {
-    /* storage full / disabled — ignore */
-  }
+  saveJSON(LANES_STORAGE_KEY, lanes);
 }
 
 export function isLifeLane(lane: SwimLane): boolean {

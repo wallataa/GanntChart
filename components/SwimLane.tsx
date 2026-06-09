@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
+import { useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
 import type {
   DateRange,
   Event,
@@ -9,19 +9,14 @@ import type {
   Subtask,
   SwimLane as SwimLaneType,
 } from "@/types";
-import {
-  columnIndex,
-  daysInRange,
-  fromISODate,
-  isToday,
-  isWeekend,
-  toISODate,
-} from "@/lib/dates";
+import { daysInRange, toISODate } from "@/lib/dates";
 import { isLifeLane } from "@/lib/lanes";
 import { fillFor } from "@/lib/colors";
 import { packEvents } from "@/lib/events";
+import { startDrag } from "@/lib/drag";
 import Sidebar from "./Sidebar";
 import EventBlock from "./EventBlock";
+import DayColumns from "./DayColumns";
 
 interface SwimLaneProps {
   lane: SwimLaneType;
@@ -74,28 +69,35 @@ export default function SwimLaneRow({
     e.preventDefault();
     const startY = e.clientY;
     const startH = effHeight ?? trackRef.current?.offsetHeight ?? 34;
-    const onMove = (ev: PointerEvent) => {
-      const h = Math.max(32, Math.round(startH + (ev.clientY - startY)));
-      dragHeightRef.current = h;
-      setDragHeight(h);
-    };
-    const onUp = () => {
-      window.removeEventListener("pointermove", onMove);
-      if (dragHeightRef.current != null) interaction.onSetLaneHeight(lane.id, dragHeightRef.current);
-      dragHeightRef.current = null;
-      setDragHeight(null);
-    };
-    window.addEventListener("pointermove", onMove);
-    window.addEventListener("pointerup", onUp, { once: true });
+    startDrag(e, {
+      onMove: (ev) => {
+        const h = Math.max(32, Math.round(startH + (ev.clientY - startY)));
+        dragHeightRef.current = h;
+        setDragHeight(h);
+      },
+      onUp: () => {
+        if (dragHeightRef.current != null) interaction.onSetLaneHeight(lane.id, dragHeightRef.current);
+        dragHeightRef.current = null;
+        setDragHeight(null);
+      },
+    });
   };
 
   // Live preview while dragging an event edge to resize.
-  const [drag, setDrag] = useState<{ eventId: string; edge: ResizeEdge } | null>(null);
   const [preview, setPreview] = useState<{ eventId: string; start: string; end: string } | null>(
     null,
   );
   const previewRef = useRef(preview);
   previewRef.current = preview;
+
+  // Live preview of a draw-to-create gesture (press on empty track, drag to
+  // size). On release the grid controller turns it into a draft event in edit
+  // mode; a press with no drag makes a single-day block.
+  const [createPreview, setCreatePreview] = useState<{ startCol: number; endCol: number } | null>(
+    null,
+  );
+  const createPreviewRef = useRef(createPreview);
+  createPreviewRef.current = createPreview;
 
   // Map a clientX pixel to a day column index within this lane's track.
   const colFromX = (clientX: number) => {
@@ -106,37 +108,45 @@ export default function SwimLaneRow({
     return Math.max(0, Math.min(days.length - 1, i));
   };
 
-  // Drive the resize drag via window pointer listeners.
-  useEffect(() => {
-    if (!drag) return;
-    const ev = events.find((e) => e.id === drag.eventId);
-    if (!ev) return;
+  // Begin an edge-resize drag for an event (the non-dragged edge stays fixed).
+  const beginResize = (event: Event, edge: ResizeEdge) => {
+    startDrag(
+      { clientX: 0, clientY: 0 },
+      {
+        onMove: (e) => {
+          const dateISO = toISODate(days[colFromX(e.clientX)]);
+          if (edge === "end") {
+            setPreview({ eventId: event.id, start: event.start, end: dateISO < event.start ? event.start : dateISO });
+          } else {
+            setPreview({ eventId: event.id, start: dateISO > event.end ? event.end : dateISO, end: event.end });
+          }
+        },
+        onUp: () => {
+          const p = previewRef.current;
+          if (p) interaction.onResize(p.eventId, p.start, p.end);
+          setPreview(null);
+        },
+      },
+    );
+  };
 
-    const onMove = (e: PointerEvent) => {
-      const dateISO = toISODate(days[colFromX(e.clientX)]);
-      if (drag.edge === "end") {
-        const end = dateISO < ev.start ? ev.start : dateISO;
-        setPreview({ eventId: ev.id, start: ev.start, end });
-      } else {
-        const start = dateISO > ev.end ? ev.end : dateISO;
-        setPreview({ eventId: ev.id, start, end: ev.end });
-      }
-    };
-    const onUp = () => {
-      const p = previewRef.current;
-      if (p) interaction.onResize(p.eventId, p.start, p.end);
-      setDrag(null);
-      setPreview(null);
-    };
-
-    window.addEventListener("pointermove", onMove);
-    window.addEventListener("pointerup", onUp, { once: true });
-    return () => {
-      window.removeEventListener("pointermove", onMove);
-      window.removeEventListener("pointerup", onUp);
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [drag]);
+  // Press on empty track space and (optionally) drag to draw a new event.
+  const beginCreate = (e: ReactPointerEvent) => {
+    if (e.button !== 0 || e.target !== e.currentTarget) return; // empty space only
+    const startCol = colFromX(e.clientX);
+    setCreatePreview({ startCol, endCol: startCol });
+    startDrag(e, {
+      onMove: (ev) => setCreatePreview({ startCol, endCol: colFromX(ev.clientX) }),
+      onUp: () => {
+        const p = createPreviewRef.current;
+        setCreatePreview(null);
+        if (!p) return;
+        const a = Math.min(p.startCol, p.endCol);
+        const b = Math.max(p.startCol, p.endCol);
+        interaction.onCreateEvent(lane.id, toISODate(days[a]), toISODate(days[b]));
+      },
+    });
+  };
 
   // Apply the live preview so the block stretches as you drag.
   const effective = preview
@@ -148,12 +158,13 @@ export default function SwimLaneRow({
   const { placed, trackCount } = packEvents(effective, range);
   const columns = `repeat(${days.length}, ${columnWidth}px)`;
 
-  // Inline "new event" input position (when typing into an empty cell here).
-  const newHere =
-    interaction.editing?.kind === "new" && interaction.editing.laneId === lane.id
-      ? interaction.editing
-      : null;
-  const newCol = newHere ? columnIndex(fromISODate(newHere.date), range) + 1 : 0;
+  // Columns the draw-to-create preview spans (1-based, inclusive).
+  const previewCols = createPreview
+    ? {
+        start: Math.min(createPreview.startCol, createPreview.endCol) + 1,
+        span: Math.abs(createPreview.endCol - createPreview.startCol) + 1,
+      }
+    : null;
 
   return (
     <div
@@ -172,45 +183,28 @@ export default function SwimLaneRow({
         maxHeight={effHeight}
       />
 
-      {/* Track area */}
+      {/* Track area. Press on empty space (the track itself, not an event block)
+          and drag to draw a new event; release drops you into typing its title. */}
       <div
         ref={(el) => {
           trackRef.current = el;
           registerTrack(lane.id, el);
         }}
-        className="relative flex-1 border-b border-neutral-200"
+        onPointerDown={life ? undefined : beginCreate}
+        className={[
+          "relative flex-1 border-b border-neutral-200",
+          life ? "" : "cursor-text",
+        ].join(" ")}
         style={{
           minHeight: 34,
           backgroundColor: `${fillFor(lane.color)}24`,
-          ...(effHeight ? { height: effHeight, overflowY: "auto" } : null),
+          ...(effHeight ? { height: effHeight, overflowY: "auto", overflowX: "hidden" } : null),
         }}
       >
-        {/* Background: column borders, weekend tint, today highlight, click targets */}
-        <div className="absolute inset-0 grid" style={{ gridTemplateColumns: columns }}>
-          {days.map((d) => {
-            const weekend = isWeekend(d);
-            const today = isToday(d);
-            const iso = toISODate(d);
-            return (
-              <button
-                key={iso}
-                type="button"
-                disabled={life}
-                onClick={life ? undefined : () => interaction.onStartNew(lane.id, iso)}
-                className={[
-                  "h-full border-l border-neutral-200",
-                  weekend ? "bg-neutral-100" : "",
-                  today ? "bg-blue-50/60" : "",
-                  life ? "cursor-default" : "cursor-text hover:bg-blue-50",
-                ].join(" ")}
-                aria-label={life ? undefined : `Add event on ${iso}`}
-              />
-            );
-          })}
-        </div>
+        <DayColumns range={range} columnWidth={columnWidth} />
 
         {/* Foreground: event blocks (defines row height). pointer-events-none so
-            empty space falls through to the cell buttons; children re-enable. */}
+            empty space falls through to the track click handler; children re-enable. */}
         <div
           className="pointer-events-none relative grid gap-y-px py-px"
           style={{
@@ -235,30 +229,20 @@ export default function SwimLaneRow({
               onStartEdit={() => interaction.onStartEdit(p.event.id)}
               onCommitEdit={(title) => interaction.onCommitEdit(p.event.id, title)}
               onCancelEdit={interaction.onCancelEdit}
-              onResizeStart={(edge) => setDrag({ eventId: p.event.id, edge })}
+              onResizeStart={(edge) => beginResize(p.event, edge)}
               onPointerDownBody={(e) => onEventPointerDown(p.event, e)}
             />
           ))}
 
-          {/* Inline create input */}
-          {newHere && (
-            <input
-              key={newHere.date}
-              autoFocus
-              defaultValue=""
-              placeholder="Type…"
-              className="fs-11 pointer-events-auto z-20 m-[2px] h-[24px] rounded-[3px] border border-blue-400 bg-white px-1 outline-none"
-              style={{ gridColumn: `${newCol}`, gridRow: 1, width: 150 }}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") {
-                  interaction.onCommitNew(newHere.laneId, newHere.date, e.currentTarget.value);
-                } else if (e.key === "Escape") {
-                  interaction.onCancelEdit();
-                }
+          {/* Live draw-to-create preview (dashed block following the cursor). */}
+          {previewCols && (
+            <div
+              className="pointer-events-none m-[2px] rounded-[3px] border border-dashed border-blue-500"
+              style={{
+                gridColumn: `${previewCols.start} / span ${previewCols.span}`,
+                gridRow: 1,
+                backgroundColor: `${fillFor(lane.color)}99`,
               }}
-              onBlur={(e) =>
-                interaction.onCommitNew(newHere.laneId, newHere.date, e.currentTarget.value)
-              }
             />
           )}
         </div>

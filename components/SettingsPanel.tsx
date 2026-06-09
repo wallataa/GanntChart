@@ -18,14 +18,13 @@ interface SettingsPanelProps {
   onDeleteLane: (id: string) => void;
   onReorderLanes: (from: number, to: number) => void;
   onAddLane: () => void;
+  /** Reset lanes to defaults and wipe all events + subtasks. */
+  onClearAll: () => void;
 }
 
 /**
- * Slide-over settings panel. For the scaffold it covers:
- *  - Google sign-in / sign-out
- *  - Toggling which calendars feed the "Life" lane
- *
- * (Swim-lane add/rename/reorder/delete is wired in Phase 3.)
+ * Slide-over settings panel: Google sign-in/out, toggling which calendars feed
+ * the "Life" lane, and swim-lane add/rename/recolor/reorder/delete.
  */
 export default function SettingsPanel({
   open,
@@ -39,6 +38,7 @@ export default function SettingsPanel({
   onDeleteLane,
   onReorderLanes,
   onAddLane,
+  onClearAll,
 }: SettingsPanelProps) {
   const { data: session, status } = useSession();
 
@@ -149,6 +149,28 @@ export default function SettingsPanel({
               onReorder={onReorderLanes}
               onAdd={onAddLane}
             />
+          </section>
+
+          {/* Danger zone: wipe all user data. */}
+          <section>
+            <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-neutral-500">
+              Data
+            </h3>
+            <button
+              type="button"
+              onClick={() => {
+                if (
+                  window.confirm(
+                    "Clear all data?\n\nThis resets swim lanes to the defaults and deletes every event and subtask. You can undo with Ctrl+Z.",
+                  )
+                ) {
+                  onClearAll();
+                }
+              }}
+              className="w-full rounded border border-red-300 px-3 py-1.5 text-sm font-medium text-red-600 hover:bg-red-50"
+            >
+              Clear all data
+            </button>
           </section>
         </div>
       </aside>

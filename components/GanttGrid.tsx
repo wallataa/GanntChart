@@ -5,6 +5,7 @@ import { addDays } from "date-fns";
 import type { DateRange, Event, GridInteraction, Subtask, SwimLane } from "@/types";
 import { columnIndex, daysInRange, fromISODate, toISODate } from "@/lib/dates";
 import { isLifeLane, pinLifeLast } from "@/lib/lanes";
+import { startDrag } from "@/lib/drag";
 import DateHeader from "./DateHeader";
 import SwimLaneRow from "./SwimLane";
 
@@ -93,46 +94,33 @@ export default function GanttGrid({
     if (!originEl) return;
 
     const originRect = originEl.getBoundingClientRect();
-    const startX = e.clientX;
-    const startY = e.clientY;
     const startCol = columnIndex(fromISODate(event.start), range);
     const duration = columnIndex(fromISODate(event.end), range) - startCol; // in days, >= 0
-    const clickedCol = Math.floor((startX - originRect.left) / columnWidth);
+    const clickedCol = Math.floor((e.clientX - originRect.left) / columnWidth);
     const grabOffset = Math.max(0, clickedCol - startCol); // keep the grab point under the cursor
-    let activated = false;
 
-    const onMove = (ev: PointerEvent) => {
-      if (!activated) {
-        if (Math.abs(ev.clientX - startX) < DRAG_THRESHOLD && Math.abs(ev.clientY - startY) < DRAG_THRESHOLD)
-          return;
-        activated = true;
-      }
-      const hit = laneAtY(ev.clientY);
-      const laneId = hit?.lane.id ?? event.laneId;
-      const left = hit?.rect.left ?? originRect.left;
-      const rawCol = Math.floor((ev.clientX - left) / columnWidth) - grabOffset;
-      const startColNew = Math.max(0, Math.min(total - 1, rawCol));
-      setMovePreview({
-        eventId: event.id,
-        laneId,
-        start: toISODate(addDays(range.start, startColNew)),
-        end: toISODate(addDays(range.start, startColNew + duration)),
-      });
-    };
-
-    const onUp = () => {
-      window.removeEventListener("pointermove", onMove);
-      const p = previewRef.current;
-      if (activated && p) {
-        interaction.onMoveEvent(p.eventId, p.laneId, p.start, p.end);
-      } else if (!activated) {
-        interaction.onSelect(event.id); // a plain click selects
-      }
-      setMovePreview(null);
-    };
-
-    window.addEventListener("pointermove", onMove);
-    window.addEventListener("pointerup", onUp, { once: true });
+    startDrag(e, {
+      threshold: DRAG_THRESHOLD,
+      onMove: (ev) => {
+        const hit = laneAtY(ev.clientY);
+        const laneId = hit?.lane.id ?? event.laneId;
+        const left = hit?.rect.left ?? originRect.left;
+        const rawCol = Math.floor((ev.clientX - left) / columnWidth) - grabOffset;
+        const startColNew = Math.max(0, Math.min(total - 1, rawCol));
+        setMovePreview({
+          eventId: event.id,
+          laneId,
+          start: toISODate(addDays(range.start, startColNew)),
+          end: toISODate(addDays(range.start, startColNew + duration)),
+        });
+      },
+      onUp: (_ev, activated) => {
+        const p = previewRef.current;
+        if (activated && p) interaction.onMoveEvent(p.eventId, p.laneId, p.start, p.end);
+        else if (!activated) interaction.onSelect(event.id); // a plain click selects
+        setMovePreview(null);
+      },
+    });
   };
 
   // Build the lane id ordering for a reorder drag: remove the dragged lane and
@@ -160,32 +148,21 @@ export default function GanttGrid({
     if (e.button !== 0) return;
     const lane = lanes.find((l) => l.id === laneId);
     if (!lane || isLifeLane(lane)) return; // Life lane is locked.
-    const startY = e.clientY;
-    const startX = e.clientX;
-    let activated = false;
-
-    const onMove = (ev: PointerEvent) => {
-      if (!activated) {
-        if (Math.abs(ev.clientX - startX) < DRAG_THRESHOLD && Math.abs(ev.clientY - startY) < DRAG_THRESHOLD)
-          return;
-        activated = true;
-        setLaneDragId(laneId);
-      }
-      setLanePreview(orderForLaneDrag(laneId, ev.clientY));
-    };
-    const onUp = () => {
-      window.removeEventListener("pointermove", onMove);
-      const order = lanePreviewRef.current;
-      if (activated && order) {
-        const from = lanes.findIndex((l) => l.id === laneId);
-        const to = order.indexOf(laneId);
-        if (from !== -1 && to !== -1 && from !== to) interaction.onReorderLanes(from, to);
-      }
-      setLaneDragId(null);
-      setLanePreview(null);
-    };
-    window.addEventListener("pointermove", onMove);
-    window.addEventListener("pointerup", onUp, { once: true });
+    startDrag(e, {
+      threshold: DRAG_THRESHOLD,
+      onActivate: () => setLaneDragId(laneId),
+      onMove: (ev) => setLanePreview(orderForLaneDrag(laneId, ev.clientY)),
+      onUp: (_ev, activated) => {
+        const order = lanePreviewRef.current;
+        if (activated && order) {
+          const from = lanes.findIndex((l) => l.id === laneId);
+          const to = order.indexOf(laneId);
+          if (from !== -1 && to !== -1 && from !== to) interaction.onReorderLanes(from, to);
+        }
+        setLaneDragId(null);
+        setLanePreview(null);
+      },
+    });
   };
 
   // Resolve the lane render order (preview order while reordering).
@@ -231,6 +208,18 @@ export default function GanttGrid({
             laneDragging={laneDragId === lane.id}
           />
         ))}
+
+        {/* Add-lane footer row (sticky to the left like the sidebar). */}
+        <div className="flex border-b border-neutral-200">
+          <button
+            type="button"
+            onClick={interaction.onAddLane}
+            style={{ width: "var(--sb-w, 316px)" }}
+            className="fs-11 sticky left-0 z-10 shrink-0 bg-white py-1.5 pl-5 text-left text-neutral-500 hover:bg-neutral-50 hover:text-neutral-700"
+          >
+            + Add lane
+          </button>
+        </div>
       </div>
     </div>
   );

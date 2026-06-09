@@ -74,8 +74,10 @@ export default function EventBlock({
         <input
           autoFocus
           defaultValue={event.title}
-          className="fs-10 w-full bg-transparent outline-none"
+          placeholder="Type…"
+          className="fs-10 w-full bg-transparent outline-none placeholder:text-neutral-500"
           onClick={(e) => e.stopPropagation()}
+          onPointerDown={(e) => e.stopPropagation()}
           onKeyDown={(e) => {
             if (e.key === "Enter") onCommitEdit(e.currentTarget.value);
             else if (e.key === "Escape") onCancelEdit();

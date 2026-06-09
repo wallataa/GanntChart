@@ -18,8 +18,3 @@ export const COLOR_NAMES = Object.keys(PALETTE) as ColorName[];
 export function fillFor(color: ColorName | undefined): string {
   return (color && PALETTE[color]) || PALETTE.graytone;
 }
-
-/** A slightly darker border tone for an event block (derived from the fill). */
-export function borderFor(color: ColorName | undefined): string {
-  return fillFor(color);
-}

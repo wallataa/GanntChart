@@ -1,28 +1,17 @@
 import type { Subtask } from "@/types";
+import { loadJSON, saveJSON } from "./storage";
 
 export const SUBTASKS_STORAGE_KEY = "gantt:subtasks";
 
 /** Read subtasks from localStorage (SSR-safe; defaults to empty). */
 export function loadSubtasks(): Subtask[] {
-  if (typeof window === "undefined") return [];
-  try {
-    const raw = window.localStorage.getItem(SUBTASKS_STORAGE_KEY);
-    if (!raw) return [];
-    const parsed = JSON.parse(raw) as Subtask[];
-    return Array.isArray(parsed) ? parsed : [];
-  } catch {
-    return [];
-  }
+  const parsed = loadJSON<Subtask[] | null>(SUBTASKS_STORAGE_KEY, null);
+  return Array.isArray(parsed) ? parsed : [];
 }
 
 /** Persist subtasks. No-op during SSR. */
 export function saveSubtasks(subtasks: Subtask[]): void {
-  if (typeof window === "undefined") return;
-  try {
-    window.localStorage.setItem(SUBTASKS_STORAGE_KEY, JSON.stringify(subtasks));
-  } catch {
-    /* storage full / disabled — ignore */
-  }
+  saveJSON(SUBTASKS_STORAGE_KEY, subtasks);
 }
 
 /** Subtasks for a given task on a given day, in insertion order. */

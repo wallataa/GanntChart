@@ -142,6 +142,12 @@ export interface GridInteraction {
   editing: EditTarget | null;
   /** Begin creating an event by typing into an empty cell. */
   onStartNew: (laneId: string, date: string) => void;
+  /**
+   * Create a blank event spanning [startISO, endISO] (drawn by dragging across
+   * empty cells) and immediately put it into title-edit mode. The block is a
+   * transient draft until a non-empty title is committed.
+   */
+  onCreateEvent: (laneId: string, startISO: string, endISO: string) => void;
   /** Begin editing an existing event's title. */
   onStartEdit: (eventId: string) => void;
   /** Select an event (for recolor / resize). */
@@ -165,4 +171,8 @@ export interface GridInteraction {
   onReorderLanes: (from: number, to: number) => void;
   /** Set a lane's fixed row height in px (0 / undefined = auto). */
   onSetLaneHeight: (id: string, height: number) => void;
+  /** Append a new swim lane (inserted before the locked Life lane). */
+  onAddLane: () => void;
+  /** Delete a lane and cascade-remove its events (Life lane is locked). */
+  onDeleteLane: (id: string) => void;
 }

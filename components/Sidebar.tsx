@@ -90,7 +90,7 @@ export default function Sidebar({
         // Lane-color tint composited over the opaque white base so the sticky
         // sidebar still masks horizontally-scrolled content (no bleed-through).
         backgroundImage: `linear-gradient(${fillFor(lane.color)}22, ${fillFor(lane.color)}22)`,
-        ...(maxHeight ? { maxHeight, overflowY: "auto" } : null),
+        ...(maxHeight ? { maxHeight, overflowY: "auto", overflowX: "hidden" } : null),
       }}
     >
       {/* Drag handle — grab to reorder the whole lane (Life lane is locked) */}
@@ -206,7 +206,7 @@ export default function Sidebar({
           recolor it); double-click renames. */}
       <div
         className={[
-          "flex shrink-0 items-center justify-center border-l px-1 text-center",
+          "group/label relative flex shrink-0 items-center justify-center border-l px-1 text-center",
           interaction.selectedLaneId === lane.id
             ? "border-blue-500 ring-2 ring-inset ring-blue-400"
             : "border-neutral-200",
@@ -216,6 +216,27 @@ export default function Sidebar({
           backgroundImage: `linear-gradient(${fillFor(lane.color)}55, ${fillFor(lane.color)}55)`,
         }}
       >
+        {/* Delete this lane (and its events). Hidden on the locked Life lane;
+            revealed on hover. Confirms when the lane still has events. */}
+        {!life && (
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              if (
+                tasks.length === 0 ||
+                window.confirm(`Delete "${lane.label}" and its ${tasks.length} event(s)?`)
+              ) {
+                interaction.onDeleteLane(lane.id);
+              }
+            }}
+            title={`Delete ${lane.label}`}
+            aria-label={`Delete ${lane.label}`}
+            className="absolute right-0.5 top-0.5 z-10 rounded px-1 text-[11px] leading-none text-neutral-400 opacity-0 hover:bg-white/60 hover:text-red-600 focus:opacity-100 group-hover/label:opacity-100"
+          >
+            ✕
+          </button>
+        )}
         {editingLabel ? (
           <input
             autoFocus

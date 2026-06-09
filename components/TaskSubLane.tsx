@@ -2,17 +2,12 @@
 
 import { useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
 import type { DateRange, Event, Subtask, SwimLane, WeeklyInteraction } from "@/types";
-import {
-  daysInRange,
-  isToday,
-  isWeekend,
-  isWithinRange,
-  placeEvent,
-  toISODate,
-} from "@/lib/dates";
+import { daysInRange, isWithinRange, placeEvent, toISODate } from "@/lib/dates";
 import { fillFor } from "@/lib/colors";
 import { subtasksFor } from "@/lib/subtasks";
+import { startDrag } from "@/lib/drag";
 import SubtaskItem from "./SubtaskItem";
+import DayColumns from "./DayColumns";
 
 interface TaskSubLaneProps {
   task: Event;
@@ -97,19 +92,18 @@ export default function TaskSubLane({
     e.preventDefault();
     const startY = e.clientY;
     const startH = effHeight ?? rowRef.current?.offsetHeight ?? 40;
-    const onMove = (ev: PointerEvent) => {
-      const h = Math.max(28, Math.round(startH + (ev.clientY - startY)));
-      dragHeightRef.current = h;
-      setDragHeight(h);
-    };
-    const onUp = () => {
-      window.removeEventListener("pointermove", onMove);
-      if (dragHeightRef.current != null) interaction.onSetTaskHeight(task.id, dragHeightRef.current);
-      dragHeightRef.current = null;
-      setDragHeight(null);
-    };
-    window.addEventListener("pointermove", onMove);
-    window.addEventListener("pointerup", onUp, { once: true });
+    startDrag(e, {
+      onMove: (ev) => {
+        const h = Math.max(28, Math.round(startH + (ev.clientY - startY)));
+        dragHeightRef.current = h;
+        setDragHeight(h);
+      },
+      onUp: () => {
+        if (dragHeightRef.current != null) interaction.onSetTaskHeight(task.id, dragHeightRef.current);
+        dragHeightRef.current = null;
+        setDragHeight(null);
+      },
+    });
   };
 
   // Map a clientX to an ISO day within the task's visible span (for double-click
@@ -210,19 +204,7 @@ export default function TaskSubLane({
 
       {/* Right: title bar on its own line, then per-day subtasks below it */}
       <div ref={trackRef} className="relative flex-1">
-        {/* Column backgrounds (borders, weekend / today tint) */}
-        <div className="absolute inset-0 grid" style={{ gridTemplateColumns: columns }}>
-          {days.map((d) => (
-            <div
-              key={toISODate(d)}
-              className={[
-                "border-l border-neutral-200",
-                isWeekend(d) ? "bg-neutral-50" : "",
-                isToday(d) ? "bg-blue-50/50" : "",
-              ].join(" ")}
-            />
-          ))}
-        </div>
+        <DayColumns range={range} columnWidth={columnWidth} />
 
         {/* Foreground (scrolls within the row height; backgrounds stay full) */}
         <div className="row-cap relative" style={{ maxHeight: effHeight }}>

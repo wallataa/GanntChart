@@ -25,95 +25,73 @@ import {
   toISODate,
   weeklyRange,
 } from "@/lib/dates";
-import { isLifeLane, loadLanes, pinLifeLast, saveLanes } from "@/lib/lanes";
+import { DEFAULT_LANES, isLifeLane, loadLanes, pinLifeLast, saveLanes } from "@/lib/lanes";
 import { loadEvents, saveEvents } from "@/lib/events";
 import { loadSubtasks, saveSubtasks } from "@/lib/subtasks";
 import { COLOR_NAMES, PALETTE } from "@/lib/colors";
+import { usePersistedState } from "@/lib/usePersistedState";
+import { useHistory, type Doc } from "@/lib/useHistory";
 import GanttGrid from "@/components/GanttGrid";
 import WeeklyView from "@/components/WeeklyView";
 import SettingsPanel from "@/components/SettingsPanel";
 
+const clamp = (min: number, max: number) => (v: number) => Math.max(min, Math.min(max, Math.round(v)));
+const clampColWidth = clamp(28, 120);
+const clampFontScale = (v: number) => Math.max(0.8, Math.min(1.8, Math.round(v * 10) / 10));
+const clampNotesWidth = clamp(120, 400);
+const clampLabelWidth = clamp(60, 280);
+
 export default function Home() {
   const { data: session } = useSession();
 
-  // Swim lanes + manual events come from localStorage (seeded with defaults).
-  const [lanes, setLanes] = useState<SwimLane[]>([]);
-  const [manualEvents, setManualEvents] = useState<Event[]>([]);
+  // Swim lanes, manual events, and subtasks form one undoable document, mirrored
+  // to localStorage. Ctrl+Z / Ctrl+Y walk the history; loading from storage and
+  // "clear all data" replace it. View settings (below) are deliberately outside
+  // the document so zoom/font changes aren't tangled into undo.
+  const persistDoc = useCallback((d: Doc) => {
+    saveLanes(d.lanes);
+    saveEvents(d.events);
+    saveSubtasks(d.subtasks);
+  }, []);
+  const { doc, commit, reset, undo, redo, canUndo, canRedo } = useHistory(
+    { lanes: [], events: [], subtasks: [] },
+    persistDoc,
+  );
+  const { lanes, events: manualEvents, subtasks } = doc;
 
   // Active view + its date windows (main spans months, weekly spans 14 days).
   const [view, setView] = useState<ViewMode>("main");
   const [range, setRange] = useState<DateRange>(() => defaultRange());
   const [weekRange, setWeekRange] = useState<DateRange>(() => weeklyRange());
 
-  // Subtasks (weekly view) + inline edit state.
-  const [subtasks, setSubtasks] = useState<Subtask[]>([]);
+  // Inline subtask edit state (weekly view).
   const [subEditing, setSubEditing] = useState<SubtaskEditTarget | null>(null);
 
-  // Adjustable day-column width (shared by both views), persisted. Resized by
-  // dragging a column edge in the date header (see DateHeader).
-  const COL_WIDTH_KEY = "gantt:colWidth";
-  const [columnWidth, setColumnWidth] = useState<number>(COLUMN_WIDTH);
-  const changeColumnWidth = (next: number) => {
-    const clamped = Math.max(28, Math.min(120, Math.round(next)));
-    setColumnWidth(clamped);
-    try {
-      window.localStorage.setItem(COL_WIDTH_KEY, String(clamped));
-    } catch {
-      /* ignore */
-    }
-  };
-
-  // Adjustable font scale (− / +), applied to the grid via the `--fs` CSS var,
-  // persisted. 1 = default size.
-  const FONT_SCALE_KEY = "gantt:fontScale";
-  const [fontScale, setFontScale] = useState<number>(1);
-  const changeFontScale = (next: number) => {
-    const clamped = Math.max(0.8, Math.min(1.8, Math.round(next * 10) / 10));
-    setFontScale(clamped);
-    try {
-      window.localStorage.setItem(FONT_SCALE_KEY, String(clamped));
-    } catch {
-      /* ignore */
-    }
-  };
-
-  // Adjustable left-column widths (notes + label), set by dragging the column
-  // edges in the header. Driven into the grid via CSS vars; persisted.
-  const SB_NOTES_KEY = "gantt:sbNotesW";
-  const SB_LABEL_KEY = "gantt:sbLabelW";
-  const [sidebarNotesWidth, setSidebarNotesWidth] = useState(SIDEBAR_NOTES_WIDTH);
-  const [sidebarLabelWidth, setSidebarLabelWidth] = useState(SIDEBAR_LABEL_WIDTH);
-  const changeSidebarWidth = (part: "notes" | "label", w: number) => {
-    if (part === "notes") {
-      const v = Math.max(120, Math.min(400, Math.round(w)));
-      setSidebarNotesWidth(v);
-      try {
-        window.localStorage.setItem(SB_NOTES_KEY, String(v));
-      } catch {
-        /* ignore */
-      }
-    } else {
-      const v = Math.max(60, Math.min(280, Math.round(w)));
-      setSidebarLabelWidth(v);
-      try {
-        window.localStorage.setItem(SB_LABEL_KEY, String(v));
-      } catch {
-        /* ignore */
-      }
-    }
-  };
-
-  // Optionally hide weekly swim lanes with no tasks in the visible fortnight.
-  const HIDE_EMPTY_KEY = "gantt:hideEmptyWeekly";
-  const [hideEmptyLanes, setHideEmptyLanes] = useState(false);
-  const changeHideEmpty = (next: boolean) => {
-    setHideEmptyLanes(next);
-    try {
-      window.localStorage.setItem(HIDE_EMPTY_KEY, next ? "1" : "0");
-    } catch {
-      /* ignore */
-    }
-  };
+  // View settings (persisted to localStorage, clamped). Column width and the
+  // left-column widths are resized by dragging edges in the header; font scale
+  // and "hide empty lanes" come from the toolbar.
+  // Main and weekly views keep independent column widths (each header's drag
+  // resizes only its own view).
+  const [columnWidth, setColumnWidth] = usePersistedState("gantt:colWidth", COLUMN_WIDTH, clampColWidth);
+  const [weekColumnWidth, setWeekColumnWidth] = usePersistedState(
+    "gantt:weekColWidth",
+    COLUMN_WIDTH,
+    clampColWidth,
+  );
+  const [fontScale, setFontScale] = usePersistedState("gantt:fontScale", 1, clampFontScale);
+  const [sidebarNotesWidth, setSidebarNotesWidth] = usePersistedState(
+    "gantt:sbNotesW",
+    SIDEBAR_NOTES_WIDTH,
+    clampNotesWidth,
+  );
+  const [sidebarLabelWidth, setSidebarLabelWidth] = usePersistedState(
+    "gantt:sbLabelW",
+    SIDEBAR_LABEL_WIDTH,
+    clampLabelWidth,
+  );
+  const [hideEmptyLanes, setHideEmptyLanes] = usePersistedState("gantt:hideEmptyWeekly", false);
+  const changeSidebarWidth = (part: "notes" | "label", w: number) =>
+    part === "notes" ? setSidebarNotesWidth(w) : setSidebarLabelWidth(w);
 
   // Google Calendar state for the Life lane.
   const [gcalEvents, setGcalEvents] = useState<Event[]>([]);
@@ -129,6 +107,10 @@ export default function Home() {
   const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
   const [selectedLaneId, setSelectedLaneId] = useState<string | null>(null);
   const [editing, setEditing] = useState<EditTarget | null>(null);
+  // A just-drawn event that's being titled but not yet committed to the
+  // document (so an aborted create leaves nothing behind and never enters the
+  // undo history). Rendered alongside real events while it's being typed into.
+  const [draftEvent, setDraftEvent] = useState<Event | null>(null);
 
   // Slide-animation state for date navigation. `key` forces a remount to replay
   // the CSS animation; `dir` picks the direction.
@@ -138,20 +120,11 @@ export default function Home() {
   });
 
   // Hydrate client-only data after mount (avoids SSR/localStorage mismatch).
+  // Loading is not undoable, so use reset (clears the history stacks).
+  // View settings hydrate themselves via usePersistedState.
   useEffect(() => {
-    setLanes(loadLanes());
-    setManualEvents(loadEvents());
-    setSubtasks(loadSubtasks());
-    const savedWidth = Number(window.localStorage.getItem("gantt:colWidth"));
-    if (savedWidth >= 28 && savedWidth <= 120) setColumnWidth(savedWidth);
-    const savedScale = Number(window.localStorage.getItem("gantt:fontScale"));
-    if (savedScale >= 0.8 && savedScale <= 1.8) setFontScale(savedScale);
-    setHideEmptyLanes(window.localStorage.getItem("gantt:hideEmptyWeekly") === "1");
-    const sbN = Number(window.localStorage.getItem("gantt:sbNotesW"));
-    if (sbN >= 120 && sbN <= 400) setSidebarNotesWidth(sbN);
-    const sbL = Number(window.localStorage.getItem("gantt:sbLabelW"));
-    if (sbL >= 60 && sbL <= 280) setSidebarLabelWidth(sbL);
-  }, []);
+    reset({ lanes: loadLanes(), events: loadEvents(), subtasks: loadSubtasks() });
+  }, [reset]);
 
   // Fetch GCal events for the Life lane whenever the range, session, or the
   // set of enabled calendars changes.
@@ -196,8 +169,8 @@ export default function Home() {
   }, [fetchCalendar]);
 
   const allEvents = useMemo(
-    () => [...manualEvents, ...gcalEvents],
-    [manualEvents, gcalEvents],
+    () => [...manualEvents, ...gcalEvents, ...(draftEvent ? [draftEvent] : [])],
+    [manualEvents, gcalEvents, draftEvent],
   );
 
   const handleToggleCalendar = (id: string, enabled: boolean) => {
@@ -206,11 +179,10 @@ export default function Home() {
     );
   };
 
-  // Persist manual events to state + localStorage in one place.
-  const persistEvents = (next: Event[]) => {
-    setManualEvents(next);
-    saveEvents(next);
-  };
+  // Single-slice mutations of the undoable document. Each records one history
+  // step; multi-slice changes (e.g. deleting a lane + its events) call `commit`
+  // directly so they undo as one action.
+  const persistEvents = (next: Event[]) => commit({ ...doc, events: next });
 
   const newId = () =>
     typeof crypto !== "undefined" && "randomUUID" in crypto
@@ -239,6 +211,19 @@ export default function Home() {
   const handleCommitEdit = (id: string, title: string) => {
     const name = title.trim();
     setEditing(null);
+    // Committing a freshly-drawn draft: only now does it become a real event
+    // (one history step). An empty title means the draw was abandoned.
+    if (draftEvent && id === draftEvent.id) {
+      const draft = draftEvent;
+      setDraftEvent(null);
+      if (name) {
+        commit({ ...doc, events: [...manualEvents, { ...draft, title: name }] });
+        setSelectedEventId(id);
+      } else {
+        setSelectedEventId((cur) => (cur === id ? null : cur));
+      }
+      return;
+    }
     if (!name) {
       // Clearing the text deletes the event (like emptying a cell).
       persistEvents(manualEvents.filter((e) => e.id !== id));
@@ -246,6 +231,27 @@ export default function Home() {
       return;
     }
     persistEvents(manualEvents.map((e) => (e.id === id ? { ...e, title: name } : e)));
+  };
+
+  // Draw-to-create: make a blank draft event spanning the dragged days and drop
+  // straight into title editing. It isn't persisted until a title is committed.
+  const handleCreateEvent = (laneId: string, startISO: string, endISO: string) => {
+    const start = startISO <= endISO ? startISO : endISO;
+    const end = startISO <= endISO ? endISO : startISO;
+    const id = newId();
+    setDraftEvent({ id, laneId, title: "", start, end, color: activeColor, source: "manual" });
+    setSelectedEventId(id);
+    setSelectedLaneId(null);
+    setEditing({ kind: "event", eventId: id });
+  };
+
+  // Abort an inline edit. If it was an uncommitted draft, discard it.
+  const handleCancelEdit = () => {
+    setEditing(null);
+    if (draftEvent) {
+      setSelectedEventId((cur) => (cur === draftEvent.id ? null : cur));
+      setDraftEvent(null);
+    }
   };
 
   const handleDeleteEvent = (id: string) => {
@@ -333,10 +339,7 @@ export default function Home() {
   };
 
   // ---- Subtasks (weekly view) ----
-  const persistSubtasks = (next: Subtask[]) => {
-    setSubtasks(next);
-    saveSubtasks(next);
-  };
+  const persistSubtasks = (next: Subtask[]) => commit({ ...doc, subtasks: next });
 
   const handleCommitNewSubtask = (taskId: string, date: string, title: string) => {
     const name = title.trim();
@@ -393,11 +396,7 @@ export default function Home() {
   };
 
   // ---- Swim-lane management (Phase 3) ----
-  const persistLanes = (next: SwimLane[]) => {
-    const pinned = pinLifeLast(next);
-    setLanes(pinned);
-    saveLanes(pinned);
-  };
+  const persistLanes = (next: SwimLane[]) => commit({ ...doc, lanes: pinLifeLast(next) });
 
   const handleRenameLane = (id: string, label: string) =>
     persistLanes(lanes.map((l) => (l.id === id ? { ...l, label } : l)));
@@ -425,10 +424,24 @@ export default function Home() {
   const handleDeleteLane = (id: string) => {
     const target = lanes.find((l) => l.id === id);
     if (!target || isLifeLane(target)) return; // Life lane is locked.
-    persistLanes(lanes.filter((l) => l.id !== id));
-    // Cascade: drop the deleted lane's manual events so they don't linger
-    // orphaned in localStorage.
-    persistEvents(manualEvents.filter((e) => e.laneId !== id));
+    // Drop the lane and cascade-remove its events in one commit, so a single
+    // undo restores both.
+    commit({
+      ...doc,
+      lanes: pinLifeLast(lanes.filter((l) => l.id !== id)),
+      events: manualEvents.filter((e) => e.laneId !== id),
+    });
+    setSelectedLaneId((cur) => (cur === id ? null : cur));
+  };
+
+  // Settings → "Clear all data": reset lanes to the defaults and wipe events +
+  // subtasks. Routed through `commit` so an accidental clear is undoable.
+  const handleClearAll = () => {
+    commit({ lanes: DEFAULT_LANES, events: [], subtasks: [] });
+    setSelectedEventId(null);
+    setSelectedLaneId(null);
+    setEditing(null);
+    setSubEditing(null);
   };
 
   const handleReorderLanes = (from: number, to: number) => {
@@ -441,15 +454,7 @@ export default function Home() {
   };
 
   const handleAddLane = () => {
-    const newLane: SwimLane = {
-      id:
-        typeof crypto !== "undefined" && "randomUUID" in crypto
-          ? crypto.randomUUID()
-          : `lane-${Date.now()}`,
-      label: "New Lane",
-      color: "graytone",
-      notes: [],
-    };
+    const newLane: SwimLane = { id: newId(), label: "New Lane", color: "graytone", notes: [] };
     // pinLifeLast keeps the Life lane at the end after insertion.
     persistLanes([...lanes, newLane]);
   };
@@ -478,6 +483,21 @@ export default function Home() {
     const onKey = (e: KeyboardEvent) => {
       const tag = (e.target as HTMLElement)?.tagName;
       const typing = tag === "INPUT" || tag === "TEXTAREA";
+      // Undo/redo (Ctrl/Cmd+Z, Ctrl/Cmd+Y, Ctrl/Cmd+Shift+Z). Skip while typing
+      // so the browser's native text undo still works inside inputs.
+      if ((e.ctrlKey || e.metaKey) && !typing) {
+        const key = e.key.toLowerCase();
+        if (key === "z" && !e.shiftKey) {
+          e.preventDefault();
+          undo();
+          return;
+        }
+        if (key === "y" || (key === "z" && e.shiftKey)) {
+          e.preventDefault();
+          redo();
+          return;
+        }
+      }
       if (e.key === "Escape") {
         setEditing(null);
         setSelectedEventId(null);
@@ -490,7 +510,7 @@ export default function Home() {
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedEventId, manualEvents]);
+  }, [selectedEventId, manualEvents, undo, redo]);
 
   const interaction: GridInteraction = {
     selectedEventId,
@@ -504,9 +524,10 @@ export default function Home() {
     },
     onStartEdit: (eventId) => setEditing({ kind: "event", eventId }),
     onSelect: handleSelectEvent,
+    onCreateEvent: handleCreateEvent,
     onCommitNew: handleCommitNew,
     onCommitEdit: handleCommitEdit,
-    onCancelEdit: () => setEditing(null),
+    onCancelEdit: handleCancelEdit,
     onResize: handleResizeEvent,
     onMoveEvent: handleMoveEvent,
     onDelete: handleDeleteEvent,
@@ -514,6 +535,8 @@ export default function Home() {
     onSetLaneNotes: handleSetLaneNotes,
     onReorderLanes: handleReorderLanes,
     onSetLaneHeight: handleSetLaneHeight,
+    onAddLane: handleAddLane,
+    onDeleteLane: handleDeleteLane,
   };
 
   return (
@@ -568,13 +591,37 @@ export default function Home() {
           </button>
         </div>
 
+        {/* Undo / redo (also Ctrl+Z / Ctrl+Y). */}
+        <div className="flex items-center gap-1 border-l border-neutral-200 pl-3">
+          <button
+            type="button"
+            onClick={undo}
+            disabled={!canUndo}
+            className="rounded border border-neutral-300 px-2 py-1 text-sm hover:bg-neutral-50 disabled:opacity-30"
+            title="Undo (Ctrl+Z)"
+            aria-label="Undo"
+          >
+            ↶
+          </button>
+          <button
+            type="button"
+            onClick={redo}
+            disabled={!canRedo}
+            className="rounded border border-neutral-300 px-2 py-1 text-sm hover:bg-neutral-50 disabled:opacity-30"
+            title="Redo (Ctrl+Y)"
+            aria-label="Redo"
+          >
+            ↷
+          </button>
+        </div>
+
         {/* Font size (− / +). Column width is resized by dragging a column edge
             in the date header. */}
         <div className="flex items-center gap-1 border-l border-neutral-200 pl-3 text-sm">
           <span className="text-xs text-neutral-500">Font</span>
           <button
             type="button"
-            onClick={() => changeFontScale(fontScale - 0.1)}
+            onClick={() => setFontScale(fontScale - 0.1)}
             className="rounded border border-neutral-300 px-2 py-1 hover:bg-neutral-50"
             aria-label="Smaller font"
           >
@@ -585,7 +632,7 @@ export default function Home() {
           </span>
           <button
             type="button"
-            onClick={() => changeFontScale(fontScale + 0.1)}
+            onClick={() => setFontScale(fontScale + 0.1)}
             className="rounded border border-neutral-300 px-2 py-1 hover:bg-neutral-50"
             aria-label="Larger font"
           >
@@ -615,7 +662,7 @@ export default function Home() {
             <input
               type="checkbox"
               checked={hideEmptyLanes}
-              onChange={(e) => changeHideEmpty(e.target.checked)}
+              onChange={(e) => setHideEmptyLanes(e.target.checked)}
               className="h-3.5 w-3.5 cursor-pointer"
             />
             Hide empty lanes
@@ -685,7 +732,7 @@ export default function Home() {
                 range={range}
                 interaction={interaction}
                 columnWidth={columnWidth}
-                onColumnWidthChange={changeColumnWidth}
+                onColumnWidthChange={setColumnWidth}
                 sidebarNotesWidth={sidebarNotesWidth}
                 sidebarLabelWidth={sidebarLabelWidth}
                 onResizeSidebar={changeSidebarWidth}
@@ -699,13 +746,15 @@ export default function Home() {
                 range={weekRange}
                 subtasks={subtasks}
                 interaction={weeklyInteraction}
-                columnWidth={columnWidth}
-                onColumnWidthChange={changeColumnWidth}
+                columnWidth={weekColumnWidth}
+                onColumnWidthChange={setWeekColumnWidth}
                 sidebarNotesWidth={sidebarNotesWidth}
                 sidebarLabelWidth={sidebarLabelWidth}
                 onResizeSidebar={changeSidebarWidth}
                 onReorderLanes={handleReorderLanes}
                 onMoveTask={handleMoveTask}
+                onAddLane={handleAddLane}
+                onDeleteLane={handleDeleteLane}
                 selectedLaneId={selectedLaneId}
                 onSelectLane={handleSelectLane}
                 onToggleSubtask={weeklyInteraction.onToggle}
@@ -730,6 +779,7 @@ export default function Home() {
         onDeleteLane={handleDeleteLane}
         onReorderLanes={handleReorderLanes}
         onAddLane={handleAddLane}
+        onClearAll={handleClearAll}
       />
     </main>
   );

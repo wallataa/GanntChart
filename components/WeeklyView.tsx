@@ -5,6 +5,7 @@ import { addDays } from "date-fns";
 import type { DateRange, Event, Subtask, SwimLane, WeeklyInteraction } from "@/types";
 import { isLifeLane, pinLifeLast } from "@/lib/lanes";
 import { fromISODate, isWithinRange, placeEvent, toISODate } from "@/lib/dates";
+import { startDrag } from "@/lib/drag";
 import DateHeader from "./DateHeader";
 import WeeklyLane from "./WeeklyLane";
 
@@ -36,6 +37,10 @@ interface WeeklyViewProps {
   onToggleSubtask: (subtaskId: string) => void;
   /** Hide lanes with no task/event in the visible fortnight. */
   hideEmptyLanes: boolean;
+  /** Append a new swim lane. */
+  onAddLane: () => void;
+  /** Delete a lane and its events (Life lane is locked). */
+  onDeleteLane: (id: string) => void;
 }
 
 const DRAG_THRESHOLD = 4;
@@ -62,6 +67,8 @@ export default function WeeklyView({
   onSelectLane,
   onToggleSubtask,
   hideEmptyLanes,
+  onAddLane,
+  onDeleteLane,
 }: WeeklyViewProps) {
   // A lane has content this fortnight if any of its events overlap the window or
   // carry a subtask landing in it.
@@ -134,31 +141,21 @@ export default function WeeklyView({
     if (e.button !== 0) return;
     const lane = lanes.find((l) => l.id === laneId);
     if (!lane || isLifeLane(lane)) return;
-    const startX = e.clientX;
-    const startY = e.clientY;
-    let activated = false;
-    const onMove = (ev: PointerEvent) => {
-      if (!activated) {
-        if (Math.abs(ev.clientX - startX) < DRAG_THRESHOLD && Math.abs(ev.clientY - startY) < DRAG_THRESHOLD)
-          return;
-        activated = true;
-        setLaneDragId(laneId);
-      }
-      setLanePreview(orderForLaneDrag(laneId, ev.clientY));
-    };
-    const onUp = () => {
-      window.removeEventListener("pointermove", onMove);
-      const order = lanePreviewRef.current;
-      if (activated && order) {
-        const from = lanes.findIndex((l) => l.id === laneId);
-        const to = order.indexOf(laneId);
-        if (from !== -1 && to !== -1 && from !== to) onReorderLanes(from, to);
-      }
-      setLaneDragId(null);
-      setLanePreview(null);
-    };
-    window.addEventListener("pointermove", onMove);
-    window.addEventListener("pointerup", onUp, { once: true });
+    startDrag(e, {
+      threshold: DRAG_THRESHOLD,
+      onActivate: () => setLaneDragId(laneId),
+      onMove: (ev) => setLanePreview(orderForLaneDrag(laneId, ev.clientY)),
+      onUp: (_ev, activated) => {
+        const order = lanePreviewRef.current;
+        if (activated && order) {
+          const from = lanes.findIndex((l) => l.id === laneId);
+          const to = order.indexOf(laneId);
+          if (from !== -1 && to !== -1 && from !== to) onReorderLanes(from, to);
+        }
+        setLaneDragId(null);
+        setLanePreview(null);
+      },
+    });
   };
 
   // ---- Task reorder / move between lanes (grip) ----
@@ -191,37 +188,28 @@ export default function WeeklyView({
   ) => {
     if (e.button !== 0 || task.source !== "manual") return;
     const startX = e.clientX;
-    const startY = e.clientY;
-    let activated = false;
-    const onMove = (ev: PointerEvent) => {
-      if (!activated) {
-        if (Math.abs(ev.clientX - startX) < DRAG_THRESHOLD && Math.abs(ev.clientY - startY) < DRAG_THRESHOLD)
-          return;
-        activated = true;
-        setTaskDragId(task.id);
-      }
-      taskDropRef.current = dropTargetFor(task.id, ev.clientY);
-      if (opts.reschedule) setBarDx({ taskId: task.id, px: ev.clientX - startX });
-    };
-    const onUp = (ev: PointerEvent) => {
-      window.removeEventListener("pointermove", onMove);
-      const drop = taskDropRef.current;
-      if (activated && drop && drop.laneId) {
-        const dxCols = opts.reschedule ? Math.round((ev.clientX - startX) / columnWidth) : 0;
-        const start = dxCols
-          ? toISODate(addDays(fromISODate(task.start), dxCols))
-          : task.start;
-        const end = dxCols ? toISODate(addDays(fromISODate(task.end), dxCols)) : task.end;
-        onMoveTask(task.id, drop.laneId, drop.beforeTaskId, start, end);
-      } else if (!activated && opts.selectOnClick) {
-        interaction.onSelectTask(task.id);
-      }
-      setTaskDragId(null);
-      setBarDx(null);
-      taskDropRef.current = null;
-    };
-    window.addEventListener("pointermove", onMove);
-    window.addEventListener("pointerup", onUp, { once: true });
+    startDrag(e, {
+      threshold: DRAG_THRESHOLD,
+      onActivate: () => setTaskDragId(task.id),
+      onMove: (ev) => {
+        taskDropRef.current = dropTargetFor(task.id, ev.clientY);
+        if (opts.reschedule) setBarDx({ taskId: task.id, px: ev.clientX - startX });
+      },
+      onUp: (ev, activated) => {
+        const drop = taskDropRef.current;
+        if (activated && drop && drop.laneId) {
+          const dxCols = opts.reschedule ? Math.round((ev.clientX - startX) / columnWidth) : 0;
+          const start = dxCols ? toISODate(addDays(fromISODate(task.start), dxCols)) : task.start;
+          const end = dxCols ? toISODate(addDays(fromISODate(task.end), dxCols)) : task.end;
+          onMoveTask(task.id, drop.laneId, drop.beforeTaskId, start, end);
+        } else if (!activated && opts.selectOnClick) {
+          interaction.onSelectTask(task.id);
+        }
+        setTaskDragId(null);
+        setBarDx(null);
+        taskDropRef.current = null;
+      },
+    });
   };
 
   // Grip: vertical reorder / move only. Bar: also reschedule, and select on click.
@@ -269,8 +257,21 @@ export default function WeeklyView({
             selected={selectedLaneId === lane.id}
             onSelectLane={onSelectLane}
             onToggleSubtask={onToggleSubtask}
+            onDeleteLane={onDeleteLane}
           />
         ))}
+
+        {/* Add-lane footer row (sticky to the left like the lane headers). */}
+        <div className="flex border-b border-neutral-300">
+          <button
+            type="button"
+            onClick={onAddLane}
+            style={{ width: "var(--sb-w, 316px)" }}
+            className="fs-11 sticky left-0 z-10 shrink-0 bg-white py-1.5 pl-7 text-left text-neutral-500 hover:bg-neutral-50 hover:text-neutral-700"
+          >
+            + Add lane
+          </button>
+        </div>
       </div>
     </div>
   );

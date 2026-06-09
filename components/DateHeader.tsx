@@ -2,6 +2,7 @@
 
 import type { PointerEvent as ReactPointerEvent } from "react";
 import type { DateRange } from "@/types";
+import { startDrag } from "@/lib/drag";
 import {
   COLUMN_WIDTH,
   dayAbbrev,
@@ -47,10 +48,7 @@ export default function DateHeader({
     e.stopPropagation();
     const startX = e.clientX;
     const startW = columnWidth;
-    const onMove = (ev: PointerEvent) => onColumnWidthChange(startW + (ev.clientX - startX));
-    const onUp = () => window.removeEventListener("pointermove", onMove);
-    window.addEventListener("pointermove", onMove);
-    window.addEventListener("pointerup", onUp, { once: true });
+    startDrag(e, { onMove: (ev) => onColumnWidthChange(startW + (ev.clientX - startX)) });
   };
 
   // Drag a sidebar column's right edge to resize that left column.
@@ -60,10 +58,7 @@ export default function DateHeader({
     e.stopPropagation();
     const startX = e.clientX;
     const startW = part === "notes" ? sidebarNotesWidth : sidebarLabelWidth;
-    const onMove = (ev: PointerEvent) => onResizeSidebar(part, startW + (ev.clientX - startX));
-    const onUp = () => window.removeEventListener("pointermove", onMove);
-    window.addEventListener("pointermove", onMove);
-    window.addEventListener("pointerup", onUp, { once: true });
+    startDrag(e, { onMove: (ev) => onResizeSidebar(part, startW + (ev.clientX - startX)) });
   };
 
   return (
