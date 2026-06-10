@@ -6,65 +6,29 @@ export const LANES_STORAGE_KEY = "gantt:lanes";
 /** Stable id for the GCal-powered lane so it can be found regardless of order. */
 export const LIFE_LANE_ID = "life";
 
-/** Default swim lanes, mirroring the initial set in SPEC.md. */
+/**
+ * Default swim lanes for a fresh board: a few generic starters the user can
+ * rename or delete, plus the locked Life lane (Google Calendar). These only
+ * seed first runs and "Clear all data" — boards already in storage are
+ * unaffected.
+ */
 export const DEFAULT_LANES: SwimLane[] = [
   {
-    id: "july-4th-show",
-    label: "July 4th Show",
-    color: "peach",
-    notes: [
-      "Story board show",
-      "Figure out sound ideas",
-      "Make prelim dj set",
-      "Real time phone research",
-      "Lighting debug",
-    ],
-  },
-  {
-    id: "floating-points-install",
-    label: "Floating Points Install",
-    color: "salmon",
-    notes: [],
-  },
-  {
-    id: "web-clat",
-    label: "Web Clat",
+    id: "projects",
+    label: "Projects",
     color: "sky",
-    notes: ["publish ambient set", "publish emptyset", "publish win95"],
+    notes: [],
   },
   {
-    id: "general-todos",
-    label: "General Todos",
-    color: "graytone",
-    notes: ["Remake websites"],
+    id: "work",
+    label: "Work",
+    color: "peach",
+    notes: [],
   },
   {
-    id: "screenprint",
-    label: "Screenprint",
+    id: "personal",
+    label: "Personal",
     color: "lemon",
-    notes: [
-      "Buy more shirts",
-      "Make more designs",
-      "Buy camis",
-      "underwear for hot for eggs",
-    ],
-  },
-  {
-    id: "film-festival",
-    label: "Film Festival",
-    color: "rose",
-    notes: [],
-  },
-  {
-    id: "poster-for-ushara",
-    label: "Poster for Ushara",
-    color: "salmon",
-    notes: [],
-  },
-  {
-    id: "open-calls",
-    label: "Open Calls",
-    color: "graytone",
     notes: [],
   },
   {
