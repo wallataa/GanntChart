@@ -83,6 +83,98 @@ label,
   scrollbar-width: thin;
 }
 
+/* Rendered-markdown preview in the Notes panel. Hand-styled (no typography
+   plugin) to keep the dependency footprint at zero. */
+.notes-prose {
+  line-height: 1.6;
+  word-wrap: break-word;
+}
+.notes-prose > :first-child {
+  margin-top: 0;
+}
+.notes-prose h1,
+.notes-prose h2,
+.notes-prose h3,
+.notes-prose h4,
+.notes-prose h5,
+.notes-prose h6 {
+  margin: 1.1em 0 0.4em;
+  font-weight: 600;
+  line-height: 1.25;
+}
+.notes-prose h1 {
+  font-size: 1.5em;
+}
+.notes-prose h2 {
+  font-size: 1.3em;
+}
+.notes-prose h3 {
+  font-size: 1.13em;
+}
+.notes-prose p {
+  margin: 0.6em 0;
+}
+.notes-prose ul,
+.notes-prose ol {
+  margin: 0.6em 0;
+  padding-left: 1.4em;
+}
+.notes-prose ul {
+  list-style: disc;
+}
+.notes-prose ol {
+  list-style: decimal;
+}
+.notes-prose li {
+  margin: 0.2em 0;
+}
+.notes-prose li.task {
+  list-style: none;
+  margin-left: -1.4em;
+}
+.notes-prose li.task input {
+  margin-right: 0.45em;
+  vertical-align: middle;
+}
+.notes-prose a {
+  color: #2563eb;
+  text-decoration: underline;
+}
+.dark .notes-prose a {
+  color: #60a5fa;
+}
+.notes-prose code {
+  border-radius: 4px;
+  background: rgba(127, 127, 127, 0.18);
+  padding: 0.1em 0.35em;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.88em;
+}
+.notes-prose pre {
+  margin: 0.7em 0;
+  overflow-x: auto;
+  border-radius: 6px;
+  background: rgba(127, 127, 127, 0.14);
+  padding: 0.7em 0.9em;
+}
+.notes-prose pre code {
+  background: none;
+  padding: 0;
+  font-size: 0.85em;
+}
+.notes-prose blockquote {
+  margin: 0.7em 0;
+  border-left: 3px solid rgba(127, 127, 127, 0.4);
+  padding: 0.1em 0 0.1em 0.9em;
+  color: inherit;
+  opacity: 0.85;
+}
+.notes-prose hr {
+  margin: 1.2em 0;
+  border: 0;
+  border-top: 1px solid rgba(127, 127, 127, 0.35);
+}
+
 /* Thin scrollbars for the horizontally scrolling grid */
 .gantt-scroll {
   scrollbar-width: thin;

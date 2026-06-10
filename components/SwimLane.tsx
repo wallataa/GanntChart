@@ -126,6 +126,11 @@ export default function SwimLaneRow({
   // Press on empty track space and (optionally) drag to draw a new event.
   const beginCreate = (e: ReactPointerEvent) => {
     if (e.button !== 0 || e.target !== e.currentTarget) return; // empty space only
+    // If an event is mid-edit (e.g. a freshly-drawn draft still being typed),
+    // this tap should only blur/commit that editor — not start a second draft.
+    // On touch the input's blur fires *after* this pointer's `up`, so creating
+    // here would replace the draft before its text commits and lose it.
+    if (interaction.editingEventId) return;
     const startCol = colFromX(e.clientX);
     setCreatePreview({ startCol, endCol: startCol });
     startDrag(e, {

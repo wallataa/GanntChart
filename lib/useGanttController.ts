@@ -45,6 +45,8 @@ export interface GanttController {
   // Lane management (settings panel + both views).
   renameLane: (id: string, label: string) => void;
   setLaneColor: (id: string, color: ColorName) => void;
+  /** Set / clear a lane's free-form markdown note (empty string clears). */
+  setLaneNote: (id: string, note: string) => void;
   deleteLane: (id: string) => void;
   reorderLanes: (from: number, to: number) => void;
   addLane: () => void;
@@ -334,6 +336,12 @@ export function useGanttController(): GanttController {
   const setLaneNotes = (id: string, notes: string[]) =>
     persistLanes(lanes.map((l) => (l.id === id ? { ...l, notes } : l)));
 
+  // The lane's free-form markdown note (edited in the Notes panel). Empty clears.
+  const setLaneNote = (id: string, note: string) => {
+    const text = note.trim();
+    persistLanes(lanes.map((l) => (l.id === id ? { ...l, note: text || undefined } : l)));
+  };
+
   // Fixed row height for a main-view lane (drag its bottom edge). 0 = back to auto.
   const setLaneHeight = (id: string, height: number) =>
     persistLanes(
@@ -484,6 +492,7 @@ export function useGanttController(): GanttController {
     weeklyInteraction,
     renameLane,
     setLaneColor,
+    setLaneNote,
     deleteLane,
     reorderLanes,
     addLane,
