@@ -19,6 +19,7 @@ import Toolbar from "@/components/Toolbar";
 import GanttGrid from "@/components/GanttGrid";
 import WeeklyView from "@/components/WeeklyView";
 import SettingsPanel from "@/components/SettingsPanel";
+import NotesPanel from "@/components/NotesPanel";
 
 export default function Home() {
   // The undoable data document + all selection/editing state and handlers.
@@ -32,16 +33,24 @@ export default function Home() {
   // Persisted view settings (column widths, font scale, sidebar widths, …).
   const settings = useViewSettings();
 
-  // Phones: drop the notes column and cap the label column so the date grid
-  // gets most of the width. The user's saved widths come back on desktop.
+  // Phones: drop the notes column, cap the label column, and shrink the weekly
+  // day columns so most of a week fits the screen without zooming. The user's
+  // saved widths come back on desktop.
   const isMobile = useIsMobile();
   // The stacked split view needs vertical room — fall back to the timeline
   // on phones (the "Both" switcher option is hidden there too).
   const effectiveView: ViewMode = isMobile && view === "split" ? "main" : view;
   const sidebarNotesWidth = isMobile ? 0 : settings.sidebarNotesWidth;
   const sidebarLabelWidth = isMobile
-    ? Math.min(96, settings.sidebarLabelWidth)
+    ? Math.min(116, settings.sidebarLabelWidth)
     : settings.sidebarLabelWidth;
+  const weekColumnWidth = isMobile
+    ? Math.min(48, settings.weekColumnWidth)
+    : settings.weekColumnWidth;
+  // On a phone the weekly grid is tight, so always drop lanes with nothing in
+  // the fortnight (placeholder rows are pure noise there); desktop honors the
+  // saved preference.
+  const hideEmptyLanes = isMobile || settings.hideEmptyLanes;
 
   // Google Calendar events for the Life lane.
   const calendar = useCalendarSync(range);
@@ -57,6 +66,51 @@ export default function Home() {
   const boardSync = useBoardSync(boardDoc, ctrl.replaceDoc);
 
   const [settingsOpen, setSettingsOpen] = useState(false);
+
+  // Which markdown note (if any) is open in the side panel: a task or a lane.
+  const [notesTarget, setNotesTarget] = useState<{ kind: "event" | "lane"; id: string } | null>(
+    null,
+  );
+
+  // Open the Notes panel for whatever is currently selected (lane wins, mirroring
+  // the toolbar's color/action precedence).
+  const openNote = () => {
+    if (ctrl.selectedLaneId) setNotesTarget({ kind: "lane", id: ctrl.selectedLaneId });
+    else if (ctrl.interaction.selectedEventId)
+      setNotesTarget({ kind: "event", id: ctrl.interaction.selectedEventId });
+  };
+
+  // Resolve the open note's heading + current markdown from the live document
+  // (so it follows renames / external sync while the panel is open).
+  const noteContext = useMemo(() => {
+    if (!notesTarget) return null;
+    if (notesTarget.kind === "lane") {
+      const lane = ctrl.lanes.find((l) => l.id === notesTarget.id);
+      return lane ? { title: lane.label, kindLabel: "Lane note", value: lane.note ?? "" } : null;
+    }
+    const ev = ctrl.manualEvents.find((e) => e.id === notesTarget.id);
+    return ev ? { title: ev.title, kindLabel: "Task note", value: ev.note ?? "" } : null;
+  }, [notesTarget, ctrl.lanes, ctrl.manualEvents]);
+
+  const saveNote = (value: string) => {
+    if (!notesTarget) return;
+    if (notesTarget.kind === "lane") ctrl.setLaneNote(notesTarget.id, value);
+    else ctrl.setNote(notesTarget.id, value);
+  };
+
+  // Grid interaction with the Notes panel layered on: double-clicking an
+  // event's note badge selects it and opens its note here (the panel state
+  // lives in this component, not the controller).
+  const gridInteraction = useMemo(
+    () => ({
+      ...ctrl.interaction,
+      onOpenNote: (id: string) => {
+        ctrl.interaction.onOpenNote(id);
+        setNotesTarget({ kind: "event", id });
+      },
+    }),
+    [ctrl.interaction],
+  );
 
   // Slide-animation state for date navigation. `key` forces a remount to replay
   // the CSS animation; `dir` picks the direction.
@@ -112,7 +166,7 @@ export default function Home() {
     slide.dir === "left" ? "anim-left" : slide.dir === "right" ? "anim-right" : "anim-none";
 
   return (
-    <main className="flex h-screen flex-col p-2 sm:p-4">
+    <main className="app-shell flex flex-col p-2 sm:p-4">
       <Toolbar
         view={effectiveView}
         onViewChange={changeView}
@@ -133,9 +187,7 @@ export default function Home() {
         onHideDoneChange={settings.setHideDone}
         selectedEvent={selectedEvent}
         onToggleDone={ctrl.toggleDone}
-        onSetNote={ctrl.setNote}
-        noteOpen={ctrl.noteEditorOpen}
-        onNoteOpenChange={ctrl.setNoteEditorOpen}
+        onOpenNote={openNote}
         onPushEvent={(event) =>
           push.pushEvent(event, ctrl.lanes.find((l) => l.id === event.laneId)?.label)
         }
@@ -179,7 +231,7 @@ export default function Home() {
                 lanes={ctrl.lanes}
                 events={allEvents}
                 range={range}
-                interaction={ctrl.interaction}
+                interaction={gridInteraction}
                 columnWidth={settings.columnWidth}
                 onColumnWidthChange={settings.setColumnWidth}
                 sidebarNotesWidth={sidebarNotesWidth}
@@ -198,7 +250,7 @@ export default function Home() {
                 range={weekRange}
                 subtasks={ctrl.subtasks}
                 interaction={ctrl.weeklyInteraction}
-                columnWidth={settings.weekColumnWidth}
+                columnWidth={weekColumnWidth}
                 onColumnWidthChange={settings.setWeekColumnWidth}
                 sidebarNotesWidth={sidebarNotesWidth}
                 sidebarLabelWidth={sidebarLabelWidth}
@@ -210,7 +262,7 @@ export default function Home() {
                 selectedLaneId={ctrl.selectedLaneId}
                 onSelectLane={ctrl.selectLane}
                 onToggleSubtask={ctrl.weeklyInteraction.onToggle}
-                hideEmptyLanes={settings.hideEmptyLanes}
+                hideEmptyLanes={hideEmptyLanes}
               />
               </div>
             )}
@@ -234,6 +286,16 @@ export default function Home() {
         onReorderLanes={ctrl.reorderLanes}
         onAddLane={ctrl.addLane}
         onClearAll={ctrl.clearAll}
+      />
+
+      <NotesPanel
+        key={notesTarget ? `${notesTarget.kind}:${notesTarget.id}` : "none"}
+        open={notesTarget !== null && noteContext !== null}
+        title={noteContext?.title ?? ""}
+        kindLabel={noteContext?.kindLabel ?? ""}
+        value={noteContext?.value ?? ""}
+        onSave={saveNote}
+        onClose={() => setNotesTarget(null)}
       />
     </main>
   );

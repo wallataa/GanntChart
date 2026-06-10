@@ -53,10 +53,8 @@ interface ToolbarProps {
   /** The selected manual event, for the Done / Note / Push actions. */
   selectedEvent: Event | null;
   onToggleDone: (eventId: string) => void;
-  onSetNote: (eventId: string, note: string) => void;
-  /** Note editor popover state (also opened by double-clicking a note badge). */
-  noteOpen: boolean;
-  onNoteOpenChange: (open: boolean) => void;
+  /** Open the Notes panel for the current selection (task or lane). */
+  onOpenNote: () => void;
   onPushEvent: (event: Event) => void;
   /** True while a push request is in flight. */
   pushing: boolean;
@@ -90,8 +88,9 @@ const btn =
   "flex h-7 items-center justify-center rounded border border-neutral-300 px-2 text-sm hover:bg-neutral-50 dark:border-neutral-700 dark:hover:bg-neutral-800";
 const iconBtn = `${btn} w-7 px-0 text-neutral-600 dark:text-neutral-300`;
 
-/** Color swatch circles. Expanded when something is selected; otherwise a
- *  single compact swatch that opens the palette in a popover. */
+/** Color swatch circles. With a selection, the full strip shows inline on
+ *  desktop; on phones (and whenever nothing is selected) it collapses to a
+ *  single swatch that opens the palette in a popover. */
 function ColorControl({
   activeColor,
   onApplyColor,
@@ -123,26 +122,16 @@ function ColorControl({
     </div>
   );
 
-  if (selection) {
-    return (
-      <div className="flex items-center gap-1.5">
-        <span className="text-xs font-medium text-blue-700 dark:text-blue-400">
-          {selection === "lane" ? "Lane color" : "Event color"}
-        </span>
-        {swatches}
-      </div>
-    );
-  }
-
-  // Nothing selected: one compact swatch sets the color for the next event.
-  return (
+  // Compact swatch + popover. The only color control on phones, and the
+  // "next event color" picker on desktop when nothing is selected.
+  const compact = (
     <div className="relative">
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
         className={`${btn} gap-1.5 text-xs text-neutral-500 dark:text-neutral-400`}
-        title="Color for the next event you create"
-        aria-label="Choose default event color"
+        title={selection ? "Recolor the selection" : "Color for the next event you create"}
+        aria-label={selection ? "Recolor the selection" : "Choose default event color"}
         aria-expanded={open}
       >
         <span
@@ -161,6 +150,21 @@ function ColorControl({
       )}
     </div>
   );
+
+  if (selection) {
+    return (
+      <div className="flex items-center gap-1.5">
+        <span className="hidden text-xs font-medium text-blue-700 sm:inline dark:text-blue-400">
+          {selection === "lane" ? "Lane color" : "Event color"}
+        </span>
+        {/* Phones: collapse the 8-swatch strip into the popover button. */}
+        <div className="hidden sm:block">{swatches}</div>
+        <div className="sm:hidden">{compact}</div>
+      </div>
+    );
+  }
+
+  return compact;
 }
 
 /** The visible-range label; click to jump the window to a picked date. */
@@ -212,9 +216,7 @@ function JumpToDate({
 function EventActions({
   selectedEvent,
   onToggleDone,
-  onSetNote,
-  noteOpen,
-  onNoteOpenChange,
+  onOpenNote,
   onPushEvent,
   pushing,
   pushError,
@@ -223,9 +225,7 @@ function EventActions({
   ToolbarProps,
   | "selectedEvent"
   | "onToggleDone"
-  | "onSetNote"
-  | "noteOpen"
-  | "onNoteOpenChange"
+  | "onOpenNote"
   | "onPushEvent"
   | "pushing"
   | "pushError"
@@ -233,13 +233,8 @@ function EventActions({
 >) {
   const event = selectedEvent!;
 
-  const commitNote = (text: string) => {
-    onSetNote(event.id, text);
-    onNoteOpenChange(false);
-  };
-
   return (
-    <div className="flex items-center gap-1">
+    <div className="flex flex-wrap items-center gap-1">
       <button
         type="button"
         onClick={() => onToggleDone(event.id)}
@@ -251,53 +246,28 @@ function EventActions({
             : "text-neutral-500 dark:text-neutral-400",
         ].join(" ")}
         title={event.done ? "Mark not done" : "Mark done"}
+        aria-label={event.done ? "Mark not done" : "Mark done"}
       >
         <CheckIcon className="h-3.5 w-3.5" />
-        Done
+        <span className="hidden sm:inline">Done</span>
       </button>
 
-      <div className="relative">
-        <button
-          type="button"
-          onClick={() => onNoteOpenChange(!noteOpen)}
-          className={[
-            btn,
-            "gap-1 text-xs",
-            event.note
-              ? "text-amber-700 dark:text-amber-400"
-              : "text-neutral-500 dark:text-neutral-400",
-          ].join(" ")}
-          title={event.note ? "Edit note" : "Add a note"}
-          aria-expanded={noteOpen}
-        >
-          <NoteIcon className="h-3.5 w-3.5" />
-          Note
-        </button>
-        {noteOpen && (
-          <>
-            <div className="fixed inset-0 z-40" onClick={() => onNoteOpenChange(false)} />
-            <div className="absolute left-0 top-full z-50 mt-1 w-64 rounded-lg border border-neutral-200 bg-white p-2 shadow-xl dark:border-neutral-700 dark:bg-neutral-900">
-              <textarea
-                autoFocus
-                defaultValue={event.note ?? ""}
-                placeholder="Note for this event… (Esc to cancel)"
-                rows={4}
-                onKeyDown={(e) => {
-                  if (e.key === "Escape") onNoteOpenChange(false);
-                  else if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) {
-                    commitNote(e.currentTarget.value);
-                  }
-                }}
-                onBlur={(e) => commitNote(e.currentTarget.value)}
-                className="w-full resize-none rounded border border-neutral-300 bg-transparent p-1.5 text-xs outline-none focus:border-blue-400 dark:border-neutral-700"
-              />
-              <p className="mt-1 text-[10px] text-neutral-400 dark:text-neutral-500">
-                Saves on close · empty clears the note
-              </p>
-            </div>
-          </>
-        )}
-      </div>
+      <button
+        type="button"
+        onClick={onOpenNote}
+        className={[
+          btn,
+          "gap-1 text-xs",
+          event.note
+            ? "text-amber-700 dark:text-amber-400"
+            : "text-neutral-500 dark:text-neutral-400",
+        ].join(" ")}
+        title={event.note ? "Edit note" : "Add a note"}
+        aria-label={event.note ? "Edit note" : "Add a note"}
+      >
+        <NoteIcon className="h-3.5 w-3.5" />
+        <span className="hidden sm:inline">Note</span>
+      </button>
 
       <button
         type="button"
@@ -321,9 +291,12 @@ function EventActions({
                 ? "Update this event in your Gantt Chart calendar"
                 : "Push to your Gantt Chart calendar in Google Calendar"
         }
+        aria-label={event.pushed ? "Update in Google Calendar" : "Push to Google Calendar"}
       >
         <CalendarIcon className="h-3.5 w-3.5" />
-        {pushing ? "Pushing…" : event.pushed ? "Update" : "Push"}
+        <span className="hidden sm:inline">
+          {pushing ? "Pushing…" : event.pushed ? "Update" : "Push"}
+        </span>
       </button>
     </div>
   );
@@ -541,9 +514,7 @@ export default function Toolbar({
   selection,
   selectedEvent,
   onToggleDone,
-  onSetNote,
-  noteOpen,
-  onNoteOpenChange,
+  onOpenNote,
   onPushEvent,
   pushing,
   pushError,
@@ -690,21 +661,34 @@ export default function Toolbar({
         </label>
       </div>
 
-      {/* Color (contextual: recolors the selection, else sets the default). */}
-      <div className="flex items-center gap-2 border-l border-neutral-200 pl-3 dark:border-neutral-800">
+      {/* Color (contextual: recolors the selection, else sets the default).
+          Wraps internally so the swatches + event actions never push the page
+          wider than a phone screen (which would re-enable zoom-out). */}
+      <div className="flex min-w-0 flex-wrap items-center gap-2 border-l border-neutral-200 pl-3 dark:border-neutral-800">
         <ColorControl activeColor={activeColor} onApplyColor={onApplyColor} selection={selection} />
         {selection === "event" && selectedEvent && (
           <EventActions
             selectedEvent={selectedEvent}
             onToggleDone={onToggleDone}
-            onSetNote={onSetNote}
-            noteOpen={noteOpen}
-            onNoteOpenChange={onNoteOpenChange}
+            onOpenNote={onOpenNote}
             onPushEvent={onPushEvent}
             pushing={pushing}
             pushError={pushError}
             signedIn={signedIn}
           />
+        )}
+        {/* A selected lane gets a Note button too (opens the same panel). */}
+        {selection === "lane" && (
+          <button
+            type="button"
+            onClick={onOpenNote}
+            className={`${btn} gap-1 text-xs text-neutral-500 dark:text-neutral-400`}
+            title="Lane note"
+            aria-label="Lane note"
+          >
+            <NoteIcon className="h-3.5 w-3.5" />
+            <span className="hidden sm:inline">Note</span>
+          </button>
         )}
       </div>
 

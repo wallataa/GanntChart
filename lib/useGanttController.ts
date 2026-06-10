@@ -45,6 +45,8 @@ export interface GanttController {
   // Lane management (settings panel + both views).
   renameLane: (id: string, label: string) => void;
   setLaneColor: (id: string, color: ColorName) => void;
+  /** Set / clear a lane's free-form markdown note (empty string clears). */
+  setLaneNote: (id: string, note: string) => void;
   deleteLane: (id: string) => void;
   reorderLanes: (from: number, to: number) => void;
   addLane: () => void;
@@ -66,9 +68,6 @@ export interface GanttController {
   toggleDone: (id: string) => void;
   /** Set / clear an event's free-form note (empty string clears). */
   setNote: (id: string, note: string) => void;
-  /** Whether the toolbar note editor is open for the selected event. */
-  noteEditorOpen: boolean;
-  setNoteEditorOpen: (open: boolean) => void;
   /** Record that an event now exists in the app's Google Calendar. */
   markPushed: (id: string, pushed: { calendarId: string; eventId: string }) => void;
 
@@ -109,8 +108,6 @@ export function useGanttController(): GanttController {
   const [selectedLaneId, setSelectedLaneId] = useState<string | null>(null);
   const [editingEventId, setEditingEventId] = useState<string | null>(null);
   const [subEditing, setSubEditing] = useState<SubtaskEditTarget | null>(null);
-  // The toolbar note editor (also opened by double-clicking a note badge).
-  const [noteEditorOpen, setNoteEditorOpen] = useState(false);
   // A just-drawn event that's being titled but not yet committed to the
   // document (so an aborted create leaves nothing behind and never enters the
   // undo history).
@@ -273,16 +270,15 @@ export function useGanttController(): GanttController {
     setSelectedEventId(id);
     setSelectedLaneId(null);
     setEditingEventId(null);
-    setNoteEditorOpen(false);
     // Reflect the selected event's color in the toolbar.
     const ev = manualEvents.find((e) => e.id === id);
     if (ev?.color) setActiveColor(ev.color);
   };
 
-  // Double-click an event's note badge: select it and open the note editor.
+  // Double-click an event's note badge: select it. The page layers the Notes
+  // panel opening on top (it owns the panel state) — see gridInteraction there.
   const openNote = (id: string) => {
     selectEvent(id);
-    setNoteEditorOpen(true);
   };
 
   // Select a swim lane (so the Fill swatches recolor it). null clears.
@@ -345,6 +341,12 @@ export function useGanttController(): GanttController {
 
   const setLaneNotes = (id: string, notes: string[]) =>
     persistLanes(lanes.map((l) => (l.id === id ? { ...l, notes } : l)));
+
+  // The lane's free-form markdown note (edited in the Notes panel). Empty clears.
+  const setLaneNote = (id: string, note: string) => {
+    const text = note.trim();
+    persistLanes(lanes.map((l) => (l.id === id ? { ...l, note: text || undefined } : l)));
+  };
 
   // Fixed row height for a main-view lane (drag its bottom edge). 0 = back to auto.
   const setLaneHeight = (id: string, height: number) =>
@@ -429,7 +431,6 @@ export function useGanttController(): GanttController {
         setEditingEventId(null);
         setSelectedEventId(null);
         setSelectedLaneId(null);
-        setNoteEditorOpen(false);
       } else if ((e.key === "Delete" || e.key === "Backspace") && !typing && selectedEventId) {
         e.preventDefault();
         deleteEvent(selectedEventId);
@@ -508,6 +509,7 @@ export function useGanttController(): GanttController {
     weeklyInteraction,
     renameLane,
     setLaneColor,
+    setLaneNote,
     deleteLane,
     reorderLanes,
     addLane,
@@ -516,8 +518,6 @@ export function useGanttController(): GanttController {
     fitRows,
     toggleDone,
     setNote,
-    noteEditorOpen,
-    setNoteEditorOpen,
     markPushed,
     replaceDoc,
   };

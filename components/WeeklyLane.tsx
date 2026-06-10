@@ -98,7 +98,7 @@ export default function WeeklyLane({
       <div className="flex border-b border-neutral-300 dark:border-neutral-700">
         <div
           className={[
-            "fs-14 sticky left-0 z-10 flex shrink-0 items-center gap-1 bg-white py-1 pl-1 pr-2 font-semibold text-neutral-800 dark:bg-neutral-950 dark:text-neutral-100",
+            "fs-14 sticky left-0 z-10 flex shrink-0 items-center gap-1 bg-white py-1 pl-1 pr-2 font-semibold text-neutral-800 coarse:py-2 dark:bg-neutral-950 dark:text-neutral-100",
             selected ? "ring-2 ring-inset ring-blue-400" : "",
           ].join(" ")}
           style={{
@@ -133,7 +133,9 @@ export default function WeeklyLane({
           >
             {lane.label}
           </button>
-          {/* Delete this lane (and its events); confirms when not empty. */}
+          {/* Delete this lane (and its events); confirms when not empty.
+              Hidden on touch screens to free up the narrow label column —
+              lanes are still deletable from Settings there. */}
           {!life && (
             <button
               type="button"
@@ -142,7 +144,7 @@ export default function WeeklyLane({
               }}
               title={`Delete ${lane.label}`}
               aria-label={`Delete ${lane.label}`}
-              className="shrink-0 px-1 text-neutral-400 hover:text-red-600 dark:hover:text-red-400"
+              className="shrink-0 px-1 text-neutral-400 hover:text-red-600 coarse:hidden dark:hover:text-red-400"
             >
               <XIcon className="h-3 w-3" />
             </button>

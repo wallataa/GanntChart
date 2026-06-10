@@ -18,11 +18,15 @@ body {
     sans-serif;
 }
 
-/* Touch: no tap highlight flash, and no 300ms double-tap-zoom delay on the
-   interactive surfaces (double-tap still fires dblclick for rename/subtasks;
-   pinch-zoom and panning keep working). Drag handles opt out via touch-none. */
+/* Touch: no tap highlight flash, and no pinch/double-tap zoom anywhere —
+   iOS ignores user-scalable=no, but it honors touch-action, and zoom is only
+   allowed when every element in the touched chain allows it, so blocking it
+   on <html> covers the whole page (double-tap still fires dblclick for
+   rename/subtasks; panning keeps working). Drag handles opt out of panning
+   too via touch-none. */
 html {
   -webkit-tap-highlight-color: transparent;
+  touch-action: pan-x pan-y;
 }
 button,
 input,
@@ -30,6 +34,13 @@ textarea,
 label,
 .gantt-scroll {
   touch-action: manipulation;
+}
+
+/* Full-height app frame. Prefers the dynamic viewport unit so the bottom of
+   the grid isn't hidden behind mobile browser chrome (URL bar / toolbars). */
+.app-shell {
+  height: 100vh;
+  height: 100dvh;
 }
 
 /* Font-size scale (toolbar − / +). The grid wrapper sets the `--fs` CSS var;
@@ -47,11 +58,121 @@ label,
   font-size: calc(14px * var(--fs, 1));
 }
 
+/* Touch screens: nudge every grid text size up a step. The desktop bases are
+   tuned for a mouse at arm's length; on a phone they read as tiny. This rides
+   on top of the user's --fs zoom rather than replacing it. */
+@media (pointer: coarse) {
+  .fs-10 {
+    font-size: calc(11.5px * var(--fs, 1));
+  }
+  .fs-11 {
+    font-size: calc(12.5px * var(--fs, 1));
+  }
+  .fs-12 {
+    font-size: calc(13.5px * var(--fs, 1));
+  }
+  .fs-14 {
+    font-size: calc(15px * var(--fs, 1));
+  }
+}
+
 /* Scroll a weekly row's growing content past an inline `max-height` (set per
    task row). With no max-height it grows freely. */
 .row-cap {
   overflow-y: auto;
   scrollbar-width: thin;
+}
+
+/* Rendered-markdown preview in the Notes panel. Hand-styled (no typography
+   plugin) to keep the dependency footprint at zero. */
+.notes-prose {
+  line-height: 1.6;
+  word-wrap: break-word;
+}
+.notes-prose > :first-child {
+  margin-top: 0;
+}
+.notes-prose h1,
+.notes-prose h2,
+.notes-prose h3,
+.notes-prose h4,
+.notes-prose h5,
+.notes-prose h6 {
+  margin: 1.1em 0 0.4em;
+  font-weight: 600;
+  line-height: 1.25;
+}
+.notes-prose h1 {
+  font-size: 1.5em;
+}
+.notes-prose h2 {
+  font-size: 1.3em;
+}
+.notes-prose h3 {
+  font-size: 1.13em;
+}
+.notes-prose p {
+  margin: 0.6em 0;
+}
+.notes-prose ul,
+.notes-prose ol {
+  margin: 0.6em 0;
+  padding-left: 1.4em;
+}
+.notes-prose ul {
+  list-style: disc;
+}
+.notes-prose ol {
+  list-style: decimal;
+}
+.notes-prose li {
+  margin: 0.2em 0;
+}
+.notes-prose li.task {
+  list-style: none;
+  margin-left: -1.4em;
+}
+.notes-prose li.task input {
+  margin-right: 0.45em;
+  vertical-align: middle;
+}
+.notes-prose a {
+  color: #2563eb;
+  text-decoration: underline;
+}
+.dark .notes-prose a {
+  color: #60a5fa;
+}
+.notes-prose code {
+  border-radius: 4px;
+  background: rgba(127, 127, 127, 0.18);
+  padding: 0.1em 0.35em;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.88em;
+}
+.notes-prose pre {
+  margin: 0.7em 0;
+  overflow-x: auto;
+  border-radius: 6px;
+  background: rgba(127, 127, 127, 0.14);
+  padding: 0.7em 0.9em;
+}
+.notes-prose pre code {
+  background: none;
+  padding: 0;
+  font-size: 0.85em;
+}
+.notes-prose blockquote {
+  margin: 0.7em 0;
+  border-left: 3px solid rgba(127, 127, 127, 0.4);
+  padding: 0.1em 0 0.1em 0.9em;
+  color: inherit;
+  opacity: 0.85;
+}
+.notes-prose hr {
+  margin: 1.2em 0;
+  border: 0;
+  border-top: 1px solid rgba(127, 127, 127, 0.35);
 }
 
 /* Thin scrollbars for the horizontally scrolling grid */
