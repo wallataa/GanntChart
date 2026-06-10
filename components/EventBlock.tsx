@@ -72,7 +72,7 @@ export default function EventBlock({
         dragging ? "opacity-80 shadow-lg" : "",
         event.done && !dragging ? "opacity-50 saturate-50" : "",
         editable && !editing
-          ? "cursor-grab hover:shadow-sm hover:brightness-95 active:cursor-grabbing"
+          ? "cursor-grab touch-none hover:shadow-sm hover:brightness-95 active:cursor-grabbing"
           : "",
       ].join(" ")}
       style={{
@@ -122,7 +122,7 @@ export default function EventBlock({
               onResizeStart("start");
             }}
             className={[
-              "absolute left-0 top-0 h-full w-1.5 cursor-ew-resize bg-blue-500/0",
+              "absolute left-0 top-0 h-full w-1.5 cursor-ew-resize touch-none bg-blue-500/0 coarse:w-3",
               selected ? "bg-blue-500/30" : "group-hover:bg-blue-500/20",
             ].join(" ")}
             aria-hidden
@@ -133,7 +133,7 @@ export default function EventBlock({
               onResizeStart("end");
             }}
             className={[
-              "absolute right-0 top-0 h-full w-1.5 cursor-ew-resize bg-blue-500/0",
+              "absolute right-0 top-0 h-full w-1.5 cursor-ew-resize touch-none bg-blue-500/0 coarse:w-3",
               selected ? "bg-blue-500/30" : "group-hover:bg-blue-500/20",
             ].join(" ")}
             aria-hidden

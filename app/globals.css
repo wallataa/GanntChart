@@ -18,6 +18,20 @@ body {
     sans-serif;
 }
 
+/* Touch: no tap highlight flash, and no 300ms double-tap-zoom delay on the
+   interactive surfaces (double-tap still fires dblclick for rename/subtasks;
+   pinch-zoom and panning keep working). Drag handles opt out via touch-none. */
+html {
+  -webkit-tap-highlight-color: transparent;
+}
+button,
+input,
+textarea,
+label,
+.gantt-scroll {
+  touch-action: manipulation;
+}
+
 /* Font-size scale (toolbar − / +). The grid wrapper sets the `--fs` CSS var;
    these classes multiply their base px size by it so the whole grid scales. */
 .fs-10 {

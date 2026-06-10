@@ -21,7 +21,7 @@ export default function SubtaskChecklist({ subtasks, onToggle, className }: Subt
             type="checkbox"
             checked={s.done}
             onChange={() => onToggle(s.id)}
-            className="mt-[2px] h-2.5 w-2.5 shrink-0 cursor-pointer"
+            className="mt-[2px] h-2.5 w-2.5 shrink-0 cursor-pointer coarse:h-4 coarse:w-4"
             aria-label={s.done ? "Mark not done" : "Mark done"}
           />
           <span

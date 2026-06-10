@@ -99,6 +99,10 @@ export function useLaneReorder(
         setDraggingLaneId(null);
         setPreviewOrder(null);
       },
+      onCancel: () => {
+        setDraggingLaneId(null);
+        setPreviewOrder(null);
+      },
     });
   };
 

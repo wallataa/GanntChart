@@ -118,7 +118,7 @@ export default function WeeklyLane({
             <span
               onPointerDown={(e) => onLanePointerDown(lane.id, e)}
               title="Drag to reorder lane"
-              className="flex w-4 cursor-grab select-none justify-center text-neutral-400 hover:text-neutral-600 active:cursor-grabbing dark:hover:text-neutral-300"
+              className="flex w-4 cursor-grab touch-none select-none justify-center text-neutral-400 hover:text-neutral-600 active:cursor-grabbing dark:hover:text-neutral-300"
             >
               <GripIcon className="h-3.5 w-3.5" />
             </span>

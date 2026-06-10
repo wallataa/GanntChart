@@ -90,16 +90,18 @@ export default function DateHeader({
           {/* Drag the left columns' edges to resize them. */}
           {onResizeSidebar && (
             <>
-              <div
-                onPointerDown={startSidebarResize("notes")}
-                title="Drag to resize the notes column"
-                className="absolute top-0 z-30 h-full w-[6px] cursor-col-resize hover:bg-blue-400/40"
-                style={{ left: "calc(var(--sb-notes, 196px) - 3px)" }}
-              />
+              {sidebarNotesWidth > 0 && (
+                <div
+                  onPointerDown={startSidebarResize("notes")}
+                  title="Drag to resize the notes column"
+                  className="absolute top-0 z-30 h-full w-[6px] cursor-col-resize touch-none hover:bg-blue-400/40 coarse:w-3"
+                  style={{ left: "calc(var(--sb-notes, 196px) - 3px)" }}
+                />
+              )}
               <div
                 onPointerDown={startSidebarResize("label")}
                 title="Drag to resize the label column"
-                className="absolute -right-[3px] top-0 z-30 h-full w-[6px] cursor-col-resize hover:bg-blue-400/40"
+                className="absolute -right-[3px] top-0 z-30 h-full w-[6px] cursor-col-resize touch-none hover:bg-blue-400/40 coarse:w-3"
               />
             </>
           )}
@@ -146,7 +148,7 @@ export default function DateHeader({
                 <div
                   onPointerDown={startResize}
                   title="Drag to resize columns"
-                  className="absolute -right-[3px] top-0 z-30 h-full w-[6px] cursor-col-resize hover:bg-blue-400/40"
+                  className="absolute -right-[3px] top-0 z-30 h-full w-[6px] cursor-col-resize touch-none hover:bg-blue-400/40 coarse:w-3"
                 />
               )}
             </div>

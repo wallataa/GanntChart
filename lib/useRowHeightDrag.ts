@@ -42,6 +42,10 @@ export function useRowHeightDrag(
         dragHeightRef.current = null;
         setDragHeight(null);
       },
+      onCancel: () => {
+        dragHeightRef.current = null;
+        setDragHeight(null);
+      },
     });
   };
 

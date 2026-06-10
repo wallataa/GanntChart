@@ -114,6 +114,16 @@ export function LockIcon(p: IconProps) {
   );
 }
 
+export function MoreIcon(p: IconProps) {
+  return (
+    <Icon {...p}>
+      <circle cx="12" cy="5" r="1" />
+      <circle cx="12" cy="12" r="1" />
+      <circle cx="12" cy="19" r="1" />
+    </Icon>
+  );
+}
+
 export function CheckIcon(p: IconProps) {
   return <Icon {...p}><path d="M20 6 9 17l-5-5" /></Icon>;
 }

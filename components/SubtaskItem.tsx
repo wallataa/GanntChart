@@ -16,7 +16,7 @@ export default function SubtaskItem({ subtask, editing, interaction }: SubtaskIt
         type="checkbox"
         checked={subtask.done}
         onChange={() => interaction.onToggle(subtask.id)}
-        className="mt-[1px] h-3 w-3 shrink-0 cursor-pointer"
+        className="mt-[1px] h-3 w-3 shrink-0 cursor-pointer coarse:h-4 coarse:w-4"
         aria-label={subtask.done ? "Mark not done" : "Mark done"}
       />
       {editing ? (
