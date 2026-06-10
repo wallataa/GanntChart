@@ -38,11 +38,15 @@ export default function Home() {
   const isMobile = useIsMobile();
   const sidebarNotesWidth = isMobile ? 0 : settings.sidebarNotesWidth;
   const sidebarLabelWidth = isMobile
-    ? Math.min(96, settings.sidebarLabelWidth)
+    ? Math.min(116, settings.sidebarLabelWidth)
     : settings.sidebarLabelWidth;
   const weekColumnWidth = isMobile
     ? Math.min(48, settings.weekColumnWidth)
     : settings.weekColumnWidth;
+  // On a phone the weekly grid is tight, so always drop lanes with nothing in
+  // the fortnight (placeholder rows are pure noise there); desktop honors the
+  // saved preference.
+  const hideEmptyLanes = isMobile || settings.hideEmptyLanes;
 
   // Google Calendar events for the Life lane.
   const calendar = useCalendarSync(range);
@@ -201,7 +205,7 @@ export default function Home() {
                 selectedLaneId={ctrl.selectedLaneId}
                 onSelectLane={ctrl.selectLane}
                 onToggleSubtask={ctrl.weeklyInteraction.onToggle}
-                hideEmptyLanes={settings.hideEmptyLanes}
+                hideEmptyLanes={hideEmptyLanes}
               />
             )}
           </div>

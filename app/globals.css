@@ -58,6 +58,24 @@ label,
   font-size: calc(14px * var(--fs, 1));
 }
 
+/* Touch screens: nudge every grid text size up a step. The desktop bases are
+   tuned for a mouse at arm's length; on a phone they read as tiny. This rides
+   on top of the user's --fs zoom rather than replacing it. */
+@media (pointer: coarse) {
+  .fs-10 {
+    font-size: calc(11.5px * var(--fs, 1));
+  }
+  .fs-11 {
+    font-size: calc(12.5px * var(--fs, 1));
+  }
+  .fs-12 {
+    font-size: calc(13.5px * var(--fs, 1));
+  }
+  .fs-14 {
+    font-size: calc(15px * var(--fs, 1));
+  }
+}
+
 /* Scroll a weekly row's growing content past an inline `max-height` (set per
    task row). With no max-height it grows freely. */
 .row-cap {

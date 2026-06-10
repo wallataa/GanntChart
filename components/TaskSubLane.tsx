@@ -183,7 +183,7 @@ export default function TaskSubLane({
         <div className="row-cap relative" style={{ maxHeight: effHeight }}>
         {/* Title bar row */}
         {placement && (
-          <div className="relative grid py-[2px]" style={{ gridTemplateColumns: columns }}>
+          <div className="relative grid py-[2px] coarse:py-1" style={{ gridTemplateColumns: columns }}>
             <div
               onPointerDown={manual ? (e) => onBarPointerDown(task, e) : undefined}
               onDoubleClick={
@@ -195,7 +195,7 @@ export default function TaskSubLane({
                   : undefined
               }
               className={[
-                "flex items-center overflow-hidden rounded-[3px] border px-1.5 py-px text-left select-none",
+                "flex items-center overflow-hidden rounded-[3px] border px-1.5 py-px text-left select-none coarse:py-1",
                 manual ? "cursor-grab touch-none active:cursor-grabbing" : "",
                 selected ? "border-blue-500 ring-2 ring-blue-400" : "border-black/10",
                 task.done ? "opacity-50 saturate-50" : "",
@@ -242,7 +242,7 @@ export default function TaskSubLane({
                   onClick={(e) => {
                     if (e.target === e.currentTarget) interaction.onStartNew(task.id, iso);
                   }}
-                  className="relative min-h-[18px] cursor-text"
+                  className="relative min-h-[18px] cursor-text coarse:min-h-[26px]"
                 >
                   {subs.map((s) => (
                     <SubtaskItem
