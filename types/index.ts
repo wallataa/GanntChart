@@ -51,6 +51,8 @@ export interface SwimLane {
   color: ColorName;
   /** Bullet-point notes / sub-tasks shown in the left sidebar. */
   notes: string[];
+  /** Free-form markdown note for the lane (edited in the Notes panel). */
+  note?: string;
   /**
    * Optional fixed row height in px for the main view (set by dragging the
    * lane's bottom edge); content taller than this scrolls. Undefined = auto.

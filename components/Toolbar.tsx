@@ -53,7 +53,8 @@ interface ToolbarProps {
   /** The selected manual event, for the Done / Note / Push actions. */
   selectedEvent: Event | null;
   onToggleDone: (eventId: string) => void;
-  onSetNote: (eventId: string, note: string) => void;
+  /** Open the Notes panel for the current selection (task or lane). */
+  onOpenNote: () => void;
   onPushEvent: (event: Event) => void;
   /** True while a push request is in flight. */
   pushing: boolean;
@@ -215,7 +216,7 @@ function JumpToDate({
 function EventActions({
   selectedEvent,
   onToggleDone,
-  onSetNote,
+  onOpenNote,
   onPushEvent,
   pushing,
   pushError,
@@ -224,19 +225,13 @@ function EventActions({
   ToolbarProps,
   | "selectedEvent"
   | "onToggleDone"
-  | "onSetNote"
+  | "onOpenNote"
   | "onPushEvent"
   | "pushing"
   | "pushError"
   | "signedIn"
 >) {
-  const [noteOpen, setNoteOpen] = useState(false);
   const event = selectedEvent!;
-
-  const commitNote = (text: string) => {
-    onSetNote(event.id, text);
-    setNoteOpen(false);
-  };
 
   return (
     <div className="flex flex-wrap items-center gap-1">
@@ -257,49 +252,22 @@ function EventActions({
         <span className="hidden sm:inline">Done</span>
       </button>
 
-      <div className="relative">
-        <button
-          type="button"
-          onClick={() => setNoteOpen((o) => !o)}
-          className={[
-            btn,
-            "gap-1 text-xs",
-            event.note
-              ? "text-amber-700 dark:text-amber-400"
-              : "text-neutral-500 dark:text-neutral-400",
-          ].join(" ")}
-          title={event.note ? "Edit note" : "Add a note"}
-          aria-label={event.note ? "Edit note" : "Add a note"}
-          aria-expanded={noteOpen}
-        >
-          <NoteIcon className="h-3.5 w-3.5" />
-          <span className="hidden sm:inline">Note</span>
-        </button>
-        {noteOpen && (
-          <>
-            <div className="fixed inset-0 z-40" onClick={() => setNoteOpen(false)} />
-            <div className="absolute left-0 top-full z-50 mt-1 w-64 rounded-lg border border-neutral-200 bg-white p-2 shadow-xl dark:border-neutral-700 dark:bg-neutral-900">
-              <textarea
-                autoFocus
-                defaultValue={event.note ?? ""}
-                placeholder="Note for this event… (Esc to cancel)"
-                rows={4}
-                onKeyDown={(e) => {
-                  if (e.key === "Escape") setNoteOpen(false);
-                  else if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) {
-                    commitNote(e.currentTarget.value);
-                  }
-                }}
-                onBlur={(e) => commitNote(e.currentTarget.value)}
-                className="w-full resize-none rounded border border-neutral-300 bg-transparent p-1.5 text-xs outline-none focus:border-blue-400 dark:border-neutral-700"
-              />
-              <p className="mt-1 text-[10px] text-neutral-400 dark:text-neutral-500">
-                Saves on close · empty clears the note
-              </p>
-            </div>
-          </>
-        )}
-      </div>
+      <button
+        type="button"
+        onClick={onOpenNote}
+        className={[
+          btn,
+          "gap-1 text-xs",
+          event.note
+            ? "text-amber-700 dark:text-amber-400"
+            : "text-neutral-500 dark:text-neutral-400",
+        ].join(" ")}
+        title={event.note ? "Edit note" : "Add a note"}
+        aria-label={event.note ? "Edit note" : "Add a note"}
+      >
+        <NoteIcon className="h-3.5 w-3.5" />
+        <span className="hidden sm:inline">Note</span>
+      </button>
 
       <button
         type="button"
@@ -546,7 +514,7 @@ export default function Toolbar({
   selection,
   selectedEvent,
   onToggleDone,
-  onSetNote,
+  onOpenNote,
   onPushEvent,
   pushing,
   pushError,
@@ -704,12 +672,25 @@ export default function Toolbar({
           <EventActions
             selectedEvent={selectedEvent}
             onToggleDone={onToggleDone}
-            onSetNote={onSetNote}
+            onOpenNote={onOpenNote}
             onPushEvent={onPushEvent}
             pushing={pushing}
             pushError={pushError}
             signedIn={signedIn}
           />
+        )}
+        {/* A selected lane gets a Note button too (opens the same panel). */}
+        {selection === "lane" && (
+          <button
+            type="button"
+            onClick={onOpenNote}
+            className={`${btn} gap-1 text-xs text-neutral-500 dark:text-neutral-400`}
+            title="Lane note"
+            aria-label="Lane note"
+          >
+            <NoteIcon className="h-3.5 w-3.5" />
+            <span className="hidden sm:inline">Note</span>
+          </button>
         )}
       </div>
 

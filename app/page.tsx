@@ -19,6 +19,7 @@ import Toolbar from "@/components/Toolbar";
 import GanttGrid from "@/components/GanttGrid";
 import WeeklyView from "@/components/WeeklyView";
 import SettingsPanel from "@/components/SettingsPanel";
+import NotesPanel from "@/components/NotesPanel";
 
 export default function Home() {
   // The undoable data document + all selection/editing state and handlers.
@@ -62,6 +63,37 @@ export default function Home() {
   const boardSync = useBoardSync(boardDoc, ctrl.replaceDoc);
 
   const [settingsOpen, setSettingsOpen] = useState(false);
+
+  // Which markdown note (if any) is open in the side panel: a task or a lane.
+  const [notesTarget, setNotesTarget] = useState<{ kind: "event" | "lane"; id: string } | null>(
+    null,
+  );
+
+  // Open the Notes panel for whatever is currently selected (lane wins, mirroring
+  // the toolbar's color/action precedence).
+  const openNote = () => {
+    if (ctrl.selectedLaneId) setNotesTarget({ kind: "lane", id: ctrl.selectedLaneId });
+    else if (ctrl.interaction.selectedEventId)
+      setNotesTarget({ kind: "event", id: ctrl.interaction.selectedEventId });
+  };
+
+  // Resolve the open note's heading + current markdown from the live document
+  // (so it follows renames / external sync while the panel is open).
+  const noteContext = useMemo(() => {
+    if (!notesTarget) return null;
+    if (notesTarget.kind === "lane") {
+      const lane = ctrl.lanes.find((l) => l.id === notesTarget.id);
+      return lane ? { title: lane.label, kindLabel: "Lane note", value: lane.note ?? "" } : null;
+    }
+    const ev = ctrl.manualEvents.find((e) => e.id === notesTarget.id);
+    return ev ? { title: ev.title, kindLabel: "Task note", value: ev.note ?? "" } : null;
+  }, [notesTarget, ctrl.lanes, ctrl.manualEvents]);
+
+  const saveNote = (value: string) => {
+    if (!notesTarget) return;
+    if (notesTarget.kind === "lane") ctrl.setLaneNote(notesTarget.id, value);
+    else ctrl.setNote(notesTarget.id, value);
+  };
 
   // Slide-animation state for date navigation. `key` forces a remount to replay
   // the CSS animation; `dir` picks the direction.
@@ -137,7 +169,7 @@ export default function Home() {
         onHideDoneChange={settings.setHideDone}
         selectedEvent={selectedEvent}
         onToggleDone={ctrl.toggleDone}
-        onSetNote={ctrl.setNote}
+        onOpenNote={openNote}
         onPushEvent={push.pushEvent}
         pushing={push.pushingId !== null}
         pushError={push.pushError}
@@ -227,6 +259,16 @@ export default function Home() {
         onReorderLanes={ctrl.reorderLanes}
         onAddLane={ctrl.addLane}
         onClearAll={ctrl.clearAll}
+      />
+
+      <NotesPanel
+        key={notesTarget ? `${notesTarget.kind}:${notesTarget.id}` : "none"}
+        open={notesTarget !== null && noteContext !== null}
+        title={noteContext?.title ?? ""}
+        kindLabel={noteContext?.kindLabel ?? ""}
+        value={noteContext?.value ?? ""}
+        onSave={saveNote}
+        onClose={() => setNotesTarget(null)}
       />
     </main>
   );
