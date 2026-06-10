@@ -17,6 +17,11 @@ export interface DragOptions {
   onActivate?: () => void;
   onMove?: (e: PointerEvent) => void;
   onUp?: (e: PointerEvent, activated: boolean) => void;
+  /**
+   * The browser claimed the gesture (pointercancel — e.g. a touch turned into
+   * a scroll). Discard any preview state; onUp is NOT called.
+   */
+  onCancel?: () => void;
   /** Scrollable ancestor to edge-auto-scroll during the drag. */
   scrollContainer?: () => HTMLElement | null | undefined;
 }
@@ -39,7 +44,7 @@ function axisSpeed(pos: number, min: number, max: number): number {
 
 export function startDrag(
   start: { clientX: number; clientY: number },
-  { threshold = 0, onActivate, onMove, onUp, scrollContainer }: DragOptions,
+  { threshold = 0, onActivate, onMove, onUp, onCancel, scrollContainer }: DragOptions,
 ): void {
   const startX = start.clientX;
   const startY = start.clientY;
@@ -76,13 +81,23 @@ export function startDrag(
     lastMove = e;
     onMove?.(e);
   };
-  const up = (e: PointerEvent) => {
+  const cleanup = () => {
     window.removeEventListener("pointermove", move);
+    window.removeEventListener("pointerup", up);
+    window.removeEventListener("pointercancel", cancel);
     if (rafId) cancelAnimationFrame(rafId);
+  };
+  const up = (e: PointerEvent) => {
+    cleanup();
     onUp?.(e, activated);
+  };
+  const cancel = () => {
+    cleanup();
+    onCancel?.();
   };
 
   window.addEventListener("pointermove", move);
-  window.addEventListener("pointerup", up, { once: true });
+  window.addEventListener("pointerup", up);
+  window.addEventListener("pointercancel", cancel);
   if (scrollContainer) rafId = requestAnimationFrame(autoScrollTick);
 }

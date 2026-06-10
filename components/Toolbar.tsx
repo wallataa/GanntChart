@@ -13,6 +13,7 @@ import {
   ChevronRightIcon,
   MinusIcon,
   MoonIcon,
+  MoreIcon,
   NoteIcon,
   PlusIcon,
   RedoIcon,
@@ -86,8 +87,9 @@ const btn =
   "flex h-7 items-center justify-center rounded border border-neutral-300 px-2 text-sm hover:bg-neutral-50 dark:border-neutral-700 dark:hover:bg-neutral-800";
 const iconBtn = `${btn} w-7 px-0 text-neutral-600 dark:text-neutral-300`;
 
-/** Color swatch circles. Expanded when something is selected; otherwise a
- *  single compact swatch that opens the palette in a popover. */
+/** Color swatch circles. With a selection, the full strip shows inline on
+ *  desktop; on phones (and whenever nothing is selected) it collapses to a
+ *  single swatch that opens the palette in a popover. */
 function ColorControl({
   activeColor,
   onApplyColor,
@@ -119,26 +121,16 @@ function ColorControl({
     </div>
   );
 
-  if (selection) {
-    return (
-      <div className="flex items-center gap-1.5">
-        <span className="text-xs font-medium text-blue-700 dark:text-blue-400">
-          {selection === "lane" ? "Lane color" : "Event color"}
-        </span>
-        {swatches}
-      </div>
-    );
-  }
-
-  // Nothing selected: one compact swatch sets the color for the next event.
-  return (
+  // Compact swatch + popover. The only color control on phones, and the
+  // "next event color" picker on desktop when nothing is selected.
+  const compact = (
     <div className="relative">
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
         className={`${btn} gap-1.5 text-xs text-neutral-500 dark:text-neutral-400`}
-        title="Color for the next event you create"
-        aria-label="Choose default event color"
+        title={selection ? "Recolor the selection" : "Color for the next event you create"}
+        aria-label={selection ? "Recolor the selection" : "Choose default event color"}
         aria-expanded={open}
       >
         <span
@@ -157,6 +149,21 @@ function ColorControl({
       )}
     </div>
   );
+
+  if (selection) {
+    return (
+      <div className="flex items-center gap-1.5">
+        <span className="hidden text-xs font-medium text-blue-700 sm:inline dark:text-blue-400">
+          {selection === "lane" ? "Lane color" : "Event color"}
+        </span>
+        {/* Phones: collapse the 8-swatch strip into the popover button. */}
+        <div className="hidden sm:block">{swatches}</div>
+        <div className="sm:hidden">{compact}</div>
+      </div>
+    );
+  }
+
+  return compact;
 }
 
 /** The visible-range label; click to jump the window to a picked date. */
@@ -232,7 +239,7 @@ function EventActions({
   };
 
   return (
-    <div className="flex items-center gap-1">
+    <div className="flex flex-wrap items-center gap-1">
       <button
         type="button"
         onClick={() => onToggleDone(event.id)}
@@ -244,9 +251,10 @@ function EventActions({
             : "text-neutral-500 dark:text-neutral-400",
         ].join(" ")}
         title={event.done ? "Mark not done" : "Mark done"}
+        aria-label={event.done ? "Mark not done" : "Mark done"}
       >
         <CheckIcon className="h-3.5 w-3.5" />
-        Done
+        <span className="hidden sm:inline">Done</span>
       </button>
 
       <div className="relative">
@@ -261,10 +269,11 @@ function EventActions({
               : "text-neutral-500 dark:text-neutral-400",
           ].join(" ")}
           title={event.note ? "Edit note" : "Add a note"}
+          aria-label={event.note ? "Edit note" : "Add a note"}
           aria-expanded={noteOpen}
         >
           <NoteIcon className="h-3.5 w-3.5" />
-          Note
+          <span className="hidden sm:inline">Note</span>
         </button>
         {noteOpen && (
           <>
@@ -314,10 +323,139 @@ function EventActions({
                 ? "Update this event in your Gantt Chart calendar"
                 : "Push to your Gantt Chart calendar in Google Calendar"
         }
+        aria-label={event.pushed ? "Update in Google Calendar" : "Push to Google Calendar"}
       >
         <CalendarIcon className="h-3.5 w-3.5" />
-        {pushing ? "Pushing…" : event.pushed ? "Update" : "Push"}
+        <span className="hidden sm:inline">
+          {pushing ? "Pushing…" : event.pushed ? "Update" : "Push"}
+        </span>
       </button>
+    </div>
+  );
+}
+
+/** Small-screen overflow menu for the controls hidden from the toolbar. */
+function MoreMenu({
+  view,
+  fontScale,
+  onFontScaleChange,
+  onFitRows,
+  hideEmptyLanes,
+  onHideEmptyLanesChange,
+  hideDone,
+  onHideDoneChange,
+  boardStatus,
+  boardBackend,
+  boardError,
+  signedIn,
+  syncing,
+  syncError,
+  onOpenSettings,
+}: Pick<
+  ToolbarProps,
+  | "view"
+  | "fontScale"
+  | "onFontScaleChange"
+  | "onFitRows"
+  | "hideEmptyLanes"
+  | "onHideEmptyLanesChange"
+  | "hideDone"
+  | "onHideDoneChange"
+  | "boardStatus"
+  | "boardBackend"
+  | "boardError"
+  | "signedIn"
+  | "syncing"
+  | "syncError"
+  | "onOpenSettings"
+>) {
+  const [open, setOpen] = useState(false);
+
+  return (
+    <div className="relative sm:hidden">
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        className={iconBtn}
+        title="More options"
+        aria-label="More options"
+        aria-expanded={open}
+      >
+        <MoreIcon />
+      </button>
+      {open && (
+        <>
+          <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
+          <div className="absolute right-0 top-full z-50 mt-1 w-56 space-y-3 rounded-lg border border-neutral-200 bg-white p-3 text-sm shadow-xl dark:border-neutral-700 dark:bg-neutral-900">
+            <div className="flex items-center justify-between">
+              <span className="text-xs text-neutral-500 dark:text-neutral-400">Text size</span>
+              <span className="flex items-center gap-1">
+                <button
+                  type="button"
+                  onClick={() => onFontScaleChange(fontScale - 0.1)}
+                  className={iconBtn}
+                  aria-label="Smaller font"
+                >
+                  <MinusIcon className="h-3.5 w-3.5" />
+                </button>
+                <span className="w-9 text-center text-xs tabular-nums text-neutral-500 dark:text-neutral-400">
+                  {Math.round(fontScale * 100)}%
+                </span>
+                <button
+                  type="button"
+                  onClick={() => onFontScaleChange(fontScale + 0.1)}
+                  className={iconBtn}
+                  aria-label="Larger font"
+                >
+                  <PlusIcon className="h-3.5 w-3.5" />
+                </button>
+              </span>
+            </div>
+
+            <button type="button" onClick={onFitRows} className={`${btn} w-full text-xs`}>
+              Fit rows to content
+            </button>
+
+            <label className="flex cursor-pointer items-center gap-2 text-xs text-neutral-600 dark:text-neutral-300">
+              <input
+                type="checkbox"
+                checked={hideDone}
+                onChange={(e) => onHideDoneChange(e.target.checked)}
+                className="h-4 w-4 cursor-pointer"
+              />
+              Hide done events
+            </label>
+            {view === "weekly" && (
+              <label className="flex cursor-pointer items-center gap-2 text-xs text-neutral-600 dark:text-neutral-300">
+                <input
+                  type="checkbox"
+                  checked={hideEmptyLanes}
+                  onChange={(e) => onHideEmptyLanesChange(e.target.checked)}
+                  className="h-4 w-4 cursor-pointer"
+                />
+                Hide empty lanes
+              </label>
+            )}
+
+            <div className="space-y-1 border-t border-neutral-200 pt-2 dark:border-neutral-700">
+              <BoardStatus
+                boardStatus={boardStatus}
+                boardBackend={boardBackend}
+                boardError={boardError}
+              />
+              <SyncStatus
+                signedIn={signedIn}
+                syncing={syncing}
+                syncError={syncError}
+                onOpenSettings={() => {
+                  setOpen(false);
+                  onOpenSettings();
+                }}
+              />
+            </div>
+          </div>
+        </>
+      )}
     </div>
   );
 }
@@ -423,8 +561,8 @@ export default function Toolbar({
   onOpenSettings,
 }: ToolbarProps) {
   return (
-    <header className="mb-3 flex flex-wrap items-center gap-x-3 gap-y-2">
-      <h1 className="text-lg font-semibold tracking-tight">Gantt Chart</h1>
+    <header className="mb-2 flex flex-wrap items-center gap-x-2 gap-y-2 sm:mb-3 sm:gap-x-3">
+      <h1 className="hidden text-lg font-semibold tracking-tight md:block">Gantt Chart</h1>
 
       {/* View switcher */}
       <div className="flex h-7 overflow-hidden rounded border border-neutral-300 text-sm dark:border-neutral-700">
@@ -496,8 +634,9 @@ export default function Toolbar({
       </div>
 
       {/* View controls: font scale, fit rows, hide-empty (weekly). Column
-          widths are resized by dragging column edges in the date header. */}
-      <div className="flex items-center gap-1 border-l border-neutral-200 pl-3 dark:border-neutral-800">
+          widths are resized by dragging column edges in the date header.
+          On small screens these live in the ⋯ menu instead. */}
+      <div className="hidden items-center gap-1 border-l border-neutral-200 pl-3 dark:border-neutral-800 sm:flex">
         <button
           type="button"
           onClick={() => onFontScaleChange(fontScale - 0.1)}
@@ -556,8 +695,10 @@ export default function Toolbar({
         </label>
       </div>
 
-      {/* Color (contextual: recolors the selection, else sets the default). */}
-      <div className="flex items-center gap-2 border-l border-neutral-200 pl-3 dark:border-neutral-800">
+      {/* Color (contextual: recolors the selection, else sets the default).
+          Wraps internally so the swatches + event actions never push the page
+          wider than a phone screen (which would re-enable zoom-out). */}
+      <div className="flex min-w-0 flex-wrap items-center gap-2 border-l border-neutral-200 pl-3 dark:border-neutral-800">
         <ColorControl activeColor={activeColor} onApplyColor={onApplyColor} selection={selection} />
         {selection === "event" && selectedEvent && (
           <EventActions
@@ -573,17 +714,19 @@ export default function Toolbar({
       </div>
 
       <div className="ml-auto flex items-center gap-2">
-        <BoardStatus
-          boardStatus={boardStatus}
-          boardBackend={boardBackend}
-          boardError={boardError}
-        />
-        <SyncStatus
-          signedIn={signedIn}
-          syncing={syncing}
-          syncError={syncError}
-          onOpenSettings={onOpenSettings}
-        />
+        <div className="hidden items-center gap-2 sm:flex">
+          <BoardStatus
+            boardStatus={boardStatus}
+            boardBackend={boardBackend}
+            boardError={boardError}
+          />
+          <SyncStatus
+            signedIn={signedIn}
+            syncing={syncing}
+            syncError={syncError}
+            onOpenSettings={onOpenSettings}
+          />
+        </div>
         <button
           type="button"
           onClick={() => onThemeChange(theme === "dark" ? "light" : "dark")}
@@ -593,7 +736,26 @@ export default function Toolbar({
         >
           {theme === "dark" ? <SunIcon /> : <MoonIcon />}
         </button>
-        <HelpPopover />
+        <div className="hidden sm:block">
+          <HelpPopover />
+        </div>
+        <MoreMenu
+          view={view}
+          fontScale={fontScale}
+          onFontScaleChange={onFontScaleChange}
+          onFitRows={onFitRows}
+          hideEmptyLanes={hideEmptyLanes}
+          onHideEmptyLanesChange={onHideEmptyLanesChange}
+          hideDone={hideDone}
+          onHideDoneChange={onHideDoneChange}
+          boardStatus={boardStatus}
+          boardBackend={boardBackend}
+          boardError={boardError}
+          signedIn={signedIn}
+          syncing={syncing}
+          syncError={syncError}
+          onOpenSettings={onOpenSettings}
+        />
         <button
           type="button"
           onClick={onOpenSettings}

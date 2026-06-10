@@ -16,6 +16,8 @@ interface SidebarProps {
   tasks: Event[];
   subtasks: Subtask[];
   onToggleSubtask: (subtaskId: string) => void;
+  /** False on small screens — the notes column is collapsed entirely. */
+  showNotes: boolean;
   /** Fixed row height in px (matches the track); content taller scrolls. */
   maxHeight?: number;
 }
@@ -33,6 +35,7 @@ export default function Sidebar({
   tasks,
   subtasks,
   onToggleSubtask,
+  showNotes,
   maxHeight,
 }: SidebarProps) {
   const life = isLifeLane(lane);
@@ -107,13 +110,14 @@ export default function Sidebar({
         <div
           onPointerDown={(e) => onLanePointerDown(lane.id, e)}
           title="Drag to move lane"
-          className="absolute left-0 top-0 z-10 flex h-full w-4 cursor-grab select-none items-center justify-center text-neutral-300 hover:bg-neutral-100 hover:text-neutral-500 active:cursor-grabbing dark:text-neutral-600 dark:hover:bg-neutral-800 dark:hover:text-neutral-400"
+          className="absolute left-0 top-0 z-10 flex h-full w-4 cursor-grab touch-none select-none items-center justify-center text-neutral-300 hover:bg-neutral-100 hover:text-neutral-500 active:cursor-grabbing dark:text-neutral-600 dark:hover:bg-neutral-800 dark:hover:text-neutral-400"
         >
           <GripIcon className="h-3.5 w-3.5" />
         </div>
       )}
 
-      {/* Column A — notes */}
+      {/* Column A — notes (collapsed entirely on small screens) */}
+      {showNotes && (
       <div
         className="fs-11 shrink-0 py-1.5 pl-5 pr-2 leading-snug text-neutral-700 dark:text-neutral-300"
         style={{ width: "var(--sb-notes, 196px)" }}
@@ -184,6 +188,7 @@ export default function Sidebar({
           </div>
         )}
       </div>
+      )}
 
       {/* Column B — lane label. Click selects the lane (so the Fill swatches
           recolor it); double-click renames. */}

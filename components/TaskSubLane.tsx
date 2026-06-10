@@ -126,7 +126,7 @@ export default function TaskSubLane({
             <span
               onPointerDown={(e) => onTaskPointerDown(task, e)}
               title="Drag to reorder / move to another lane"
-              className="mt-[2px] flex w-3 shrink-0 cursor-grab select-none justify-center text-neutral-300 hover:text-neutral-500 active:cursor-grabbing dark:text-neutral-600 dark:hover:text-neutral-400"
+              className="mt-[2px] flex w-3 shrink-0 cursor-grab touch-none select-none justify-center text-neutral-300 hover:text-neutral-500 active:cursor-grabbing dark:text-neutral-600 dark:hover:text-neutral-400"
             >
               <GripIcon className="h-3 w-3" />
             </span>
@@ -183,7 +183,7 @@ export default function TaskSubLane({
         <div className="row-cap relative" style={{ maxHeight: effHeight }}>
         {/* Title bar row */}
         {placement && (
-          <div className="relative grid py-[2px]" style={{ gridTemplateColumns: columns }}>
+          <div className="relative grid py-[2px] coarse:py-1" style={{ gridTemplateColumns: columns }}>
             <div
               onPointerDown={manual ? (e) => onBarPointerDown(task, e) : undefined}
               onDoubleClick={
@@ -195,8 +195,8 @@ export default function TaskSubLane({
                   : undefined
               }
               className={[
-                "flex items-center overflow-hidden rounded-[3px] border px-1.5 py-px text-left select-none",
-                manual ? "cursor-grab active:cursor-grabbing" : "",
+                "flex items-center overflow-hidden rounded-[3px] border px-1.5 py-px text-left select-none coarse:py-1",
+                manual ? "cursor-grab touch-none active:cursor-grabbing" : "",
                 selected ? "border-blue-500 ring-2 ring-blue-400" : "border-black/10",
                 task.done ? "opacity-50 saturate-50" : "",
               ].join(" ")}
@@ -242,7 +242,7 @@ export default function TaskSubLane({
                   onClick={(e) => {
                     if (e.target === e.currentTarget) interaction.onStartNew(task.id, iso);
                   }}
-                  className="relative min-h-[18px] cursor-text"
+                  className="relative min-h-[18px] cursor-text coarse:min-h-[26px]"
                 >
                   {subs.map((s) => (
                     <SubtaskItem
@@ -288,7 +288,7 @@ export default function TaskSubLane({
         onPointerDown={onResizeRow}
         onDoubleClick={() => interaction.onSetTaskHeight(task.id, 0)}
         title="Drag to resize row height · double-click to reset"
-        className="absolute bottom-0 left-0 right-0 z-20 h-1.5 cursor-row-resize hover:bg-blue-400/40"
+        className="absolute bottom-0 left-0 right-0 z-20 h-1.5 cursor-row-resize touch-none hover:bg-blue-400/40 coarse:h-3"
       />
     </div>
   );

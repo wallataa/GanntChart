@@ -13,6 +13,7 @@ import { useGanttController } from "@/lib/useGanttController";
 import { useCalendarSync } from "@/lib/useCalendarSync";
 import { useCalendarPush } from "@/lib/useCalendarPush";
 import { useBoardSync } from "@/lib/useBoardSync";
+import { useIsMobile } from "@/lib/useIsMobile";
 import { useViewSettings } from "@/lib/useViewSettings";
 import Toolbar from "@/components/Toolbar";
 import GanttGrid from "@/components/GanttGrid";
@@ -30,6 +31,22 @@ export default function Home() {
 
   // Persisted view settings (column widths, font scale, sidebar widths, …).
   const settings = useViewSettings();
+
+  // Phones: drop the notes column, cap the label column, and shrink the weekly
+  // day columns so most of a week fits the screen without zooming. The user's
+  // saved widths come back on desktop.
+  const isMobile = useIsMobile();
+  const sidebarNotesWidth = isMobile ? 0 : settings.sidebarNotesWidth;
+  const sidebarLabelWidth = isMobile
+    ? Math.min(116, settings.sidebarLabelWidth)
+    : settings.sidebarLabelWidth;
+  const weekColumnWidth = isMobile
+    ? Math.min(48, settings.weekColumnWidth)
+    : settings.weekColumnWidth;
+  // On a phone the weekly grid is tight, so always drop lanes with nothing in
+  // the fortnight (placeholder rows are pure noise there); desktop honors the
+  // saved preference.
+  const hideEmptyLanes = isMobile || settings.hideEmptyLanes;
 
   // Google Calendar events for the Life lane.
   const calendar = useCalendarSync(range);
@@ -99,7 +116,7 @@ export default function Home() {
     slide.dir === "left" ? "anim-left" : slide.dir === "right" ? "anim-right" : "anim-none";
 
   return (
-    <main className="flex h-screen flex-col p-4">
+    <main className="app-shell flex flex-col p-2 sm:p-4">
       <Toolbar
         view={view}
         onViewChange={changeView}
@@ -149,9 +166,9 @@ export default function Home() {
             style={
               {
                 ["--fs" as string]: settings.fontScale,
-                ["--sb-notes" as string]: `${settings.sidebarNotesWidth}px`,
-                ["--sb-label" as string]: `${settings.sidebarLabelWidth}px`,
-                ["--sb-w" as string]: `${settings.sidebarNotesWidth + settings.sidebarLabelWidth}px`,
+                ["--sb-notes" as string]: `${sidebarNotesWidth}px`,
+                ["--sb-label" as string]: `${sidebarLabelWidth}px`,
+                ["--sb-w" as string]: `${sidebarNotesWidth + sidebarLabelWidth}px`,
               } as CSSProperties
             }
           >
@@ -163,8 +180,8 @@ export default function Home() {
                 interaction={ctrl.interaction}
                 columnWidth={settings.columnWidth}
                 onColumnWidthChange={settings.setColumnWidth}
-                sidebarNotesWidth={settings.sidebarNotesWidth}
-                sidebarLabelWidth={settings.sidebarLabelWidth}
+                sidebarNotesWidth={sidebarNotesWidth}
+                sidebarLabelWidth={sidebarLabelWidth}
                 onResizeSidebar={settings.setSidebarWidth}
                 subtasks={ctrl.subtasks}
                 onToggleSubtask={ctrl.weeklyInteraction.onToggle}
@@ -176,10 +193,10 @@ export default function Home() {
                 range={weekRange}
                 subtasks={ctrl.subtasks}
                 interaction={ctrl.weeklyInteraction}
-                columnWidth={settings.weekColumnWidth}
+                columnWidth={weekColumnWidth}
                 onColumnWidthChange={settings.setWeekColumnWidth}
-                sidebarNotesWidth={settings.sidebarNotesWidth}
-                sidebarLabelWidth={settings.sidebarLabelWidth}
+                sidebarNotesWidth={sidebarNotesWidth}
+                sidebarLabelWidth={sidebarLabelWidth}
                 onResizeSidebar={settings.setSidebarWidth}
                 onReorderLanes={ctrl.reorderLanes}
                 onMoveTask={ctrl.moveTask}
@@ -188,7 +205,7 @@ export default function Home() {
                 selectedLaneId={ctrl.selectedLaneId}
                 onSelectLane={ctrl.selectLane}
                 onToggleSubtask={ctrl.weeklyInteraction.onToggle}
-                hideEmptyLanes={settings.hideEmptyLanes}
+                hideEmptyLanes={hideEmptyLanes}
               />
             )}
           </div>

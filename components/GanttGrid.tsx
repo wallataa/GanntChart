@@ -99,6 +99,7 @@ export default function GanttGrid({
         else if (!activated) interaction.onSelect(event.id); // a plain click selects
         setMovePreview(null);
       },
+      onCancel: () => setMovePreview(null),
     });
   };
 
@@ -135,6 +136,7 @@ export default function GanttGrid({
             columnWidth={columnWidth}
             subtasks={subtasks}
             onToggleSubtask={onToggleSubtask}
+            showNotes={sidebarNotesWidth > 0}
             registerTrack={registerLane}
             onEventPointerDown={handleEventPointerDown}
             draggingId={movePreview?.eventId ?? null}

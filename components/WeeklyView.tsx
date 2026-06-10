@@ -151,6 +151,11 @@ export default function WeeklyView({
         setBarDx(null);
         taskDropRef.current = null;
       },
+      onCancel: () => {
+        setTaskDragId(null);
+        setBarDx(null);
+        taskDropRef.current = null;
+      },
     });
   };
 

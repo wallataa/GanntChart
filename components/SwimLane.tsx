@@ -28,6 +28,8 @@ interface SwimLaneProps {
   /** All subtasks (for the per-task to-do list in the sidebar). */
   subtasks: Subtask[];
   onToggleSubtask: (subtaskId: string) => void;
+  /** False on small screens — the notes column is collapsed entirely. */
+  showNotes: boolean;
   /** Register this lane's track element for cross-lane drag hit-testing. */
   registerTrack: (laneId: string, el: HTMLElement | null) => void;
   /** Begin a move-drag from an event body (handled by the grid controller). */
@@ -49,6 +51,7 @@ export default function SwimLaneRow({
   columnWidth,
   subtasks,
   onToggleSubtask,
+  showNotes,
   registerTrack,
   onEventPointerDown,
   draggingId,
@@ -115,6 +118,7 @@ export default function SwimLaneRow({
           if (p) interaction.onResize(p.eventId, p.start, p.end);
           setPreview(null);
         },
+        onCancel: () => setPreview(null),
       },
     );
   };
@@ -135,6 +139,8 @@ export default function SwimLaneRow({
         const b = Math.max(p.startCol, p.endCol);
         interaction.onCreateEvent(lane.id, toISODate(days[a]), toISODate(days[b]));
       },
+      // A touch that became a scroll: discard the draft preview, create nothing.
+      onCancel: () => setCreatePreview(null),
     });
   };
 
@@ -170,6 +176,7 @@ export default function SwimLaneRow({
         tasks={events}
         subtasks={subtasks}
         onToggleSubtask={onToggleSubtask}
+        showNotes={showNotes}
         maxHeight={effHeight}
       />
 
@@ -247,7 +254,7 @@ export default function SwimLaneRow({
         onPointerDown={onResizeRow}
         onDoubleClick={() => interaction.onSetLaneHeight(lane.id, 0)}
         title="Drag to resize row height · double-click to reset"
-        className="absolute bottom-0 left-0 right-0 z-20 h-1.5 cursor-row-resize hover:bg-blue-400/40"
+        className="absolute bottom-0 left-0 right-0 z-20 h-1.5 cursor-row-resize touch-none hover:bg-blue-400/40 coarse:h-3"
       />
     </div>
   );

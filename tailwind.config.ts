@@ -8,6 +8,10 @@ const config: Config = {
   ],
   theme: {
     extend: {
+      screens: {
+        // Touch devices — bigger drag handles and tap targets.
+        coarse: { raw: "(pointer: coarse)" },
+      },
       colors: {
         // Soft, desaturated swim-lane fills (see SPEC.md palette)
         peach: "#FBCFB0",
