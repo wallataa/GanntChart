@@ -87,8 +87,9 @@ const btn =
   "flex h-7 items-center justify-center rounded border border-neutral-300 px-2 text-sm hover:bg-neutral-50 dark:border-neutral-700 dark:hover:bg-neutral-800";
 const iconBtn = `${btn} w-7 px-0 text-neutral-600 dark:text-neutral-300`;
 
-/** Color swatch circles. Expanded when something is selected; otherwise a
- *  single compact swatch that opens the palette in a popover. */
+/** Color swatch circles. With a selection, the full strip shows inline on
+ *  desktop; on phones (and whenever nothing is selected) it collapses to a
+ *  single swatch that opens the palette in a popover. */
 function ColorControl({
   activeColor,
   onApplyColor,
@@ -120,27 +121,16 @@ function ColorControl({
     </div>
   );
 
-  if (selection) {
-    return (
-      <div className="flex items-center gap-1.5">
-        {/* Label is noise on a phone — the swatches speak for themselves. */}
-        <span className="hidden text-xs font-medium text-blue-700 sm:inline dark:text-blue-400">
-          {selection === "lane" ? "Lane color" : "Event color"}
-        </span>
-        {swatches}
-      </div>
-    );
-  }
-
-  // Nothing selected: one compact swatch sets the color for the next event.
-  return (
+  // Compact swatch + popover. The only color control on phones, and the
+  // "next event color" picker on desktop when nothing is selected.
+  const compact = (
     <div className="relative">
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
         className={`${btn} gap-1.5 text-xs text-neutral-500 dark:text-neutral-400`}
-        title="Color for the next event you create"
-        aria-label="Choose default event color"
+        title={selection ? "Recolor the selection" : "Color for the next event you create"}
+        aria-label={selection ? "Recolor the selection" : "Choose default event color"}
         aria-expanded={open}
       >
         <span
@@ -159,6 +149,21 @@ function ColorControl({
       )}
     </div>
   );
+
+  if (selection) {
+    return (
+      <div className="flex items-center gap-1.5">
+        <span className="hidden text-xs font-medium text-blue-700 sm:inline dark:text-blue-400">
+          {selection === "lane" ? "Lane color" : "Event color"}
+        </span>
+        {/* Phones: collapse the 8-swatch strip into the popover button. */}
+        <div className="hidden sm:block">{swatches}</div>
+        <div className="sm:hidden">{compact}</div>
+      </div>
+    );
+  }
+
+  return compact;
 }
 
 /** The visible-range label; click to jump the window to a picked date. */
