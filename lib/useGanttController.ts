@@ -66,6 +66,9 @@ export interface GanttController {
   toggleDone: (id: string) => void;
   /** Set / clear an event's free-form note (empty string clears). */
   setNote: (id: string, note: string) => void;
+  /** Whether the toolbar note editor is open for the selected event. */
+  noteEditorOpen: boolean;
+  setNoteEditorOpen: (open: boolean) => void;
   /** Record that an event now exists in the app's Google Calendar. */
   markPushed: (id: string, pushed: { calendarId: string; eventId: string }) => void;
 
@@ -106,6 +109,8 @@ export function useGanttController(): GanttController {
   const [selectedLaneId, setSelectedLaneId] = useState<string | null>(null);
   const [editingEventId, setEditingEventId] = useState<string | null>(null);
   const [subEditing, setSubEditing] = useState<SubtaskEditTarget | null>(null);
+  // The toolbar note editor (also opened by double-clicking a note badge).
+  const [noteEditorOpen, setNoteEditorOpen] = useState(false);
   // A just-drawn event that's being titled but not yet committed to the
   // document (so an aborted create leaves nothing behind and never enters the
   // undo history).
@@ -268,9 +273,16 @@ export function useGanttController(): GanttController {
     setSelectedEventId(id);
     setSelectedLaneId(null);
     setEditingEventId(null);
+    setNoteEditorOpen(false);
     // Reflect the selected event's color in the toolbar.
     const ev = manualEvents.find((e) => e.id === id);
     if (ev?.color) setActiveColor(ev.color);
+  };
+
+  // Double-click an event's note badge: select it and open the note editor.
+  const openNote = (id: string) => {
+    selectEvent(id);
+    setNoteEditorOpen(true);
   };
 
   // Select a swim lane (so the Fill swatches recolor it). null clears.
@@ -343,8 +355,18 @@ export function useGanttController(): GanttController {
     );
 
   const fitRows = (view: ViewMode) => {
-    if (view === "weekly") persistEvents(manualEvents.map((e) => ({ ...e, rowHeight: undefined })));
-    else persistLanes(lanes.map((l) => ({ ...l, rowHeight: undefined })));
+    if (view === "weekly") {
+      persistEvents(manualEvents.map((e) => ({ ...e, rowHeight: undefined })));
+    } else if (view === "main") {
+      persistLanes(lanes.map((l) => ({ ...l, rowHeight: undefined })));
+    } else {
+      // Split view shows both — reset every row height as one undo step.
+      commit({
+        ...doc,
+        lanes: lanes.map((l) => ({ ...l, rowHeight: undefined })),
+        events: manualEvents.map((e) => ({ ...e, rowHeight: undefined })),
+      });
+    }
   };
 
   const deleteLane = (id: string) => {
@@ -407,6 +429,7 @@ export function useGanttController(): GanttController {
         setEditingEventId(null);
         setSelectedEventId(null);
         setSelectedLaneId(null);
+        setNoteEditorOpen(false);
       } else if ((e.key === "Delete" || e.key === "Backspace") && !typing && selectedEventId) {
         e.preventDefault();
         deleteEvent(selectedEventId);
@@ -437,6 +460,7 @@ export function useGanttController(): GanttController {
     onCreateEvent: createEvent,
     onCommitEdit: commitEdit,
     onCancelEdit: cancelEdit,
+    onOpenNote: openNote,
     onResize: resizeEvent,
     onMoveEvent: moveEvent,
     onDelete: deleteEvent,
@@ -492,6 +516,8 @@ export function useGanttController(): GanttController {
     fitRows,
     toggleDone,
     setNote,
+    noteEditorOpen,
+    setNoteEditorOpen,
     markPushed,
     replaceDoc,
   };

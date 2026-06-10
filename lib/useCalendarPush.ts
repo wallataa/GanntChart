@@ -4,8 +4,9 @@ import { useState } from "react";
 import type { Event } from "@/types";
 
 export interface CalendarPush {
-  /** Push (or re-push to update) an event. No-op while a push is in flight. */
-  pushEvent: (event: Event) => void;
+  /** Push (or re-push to update) an event. No-op while a push is in flight.
+   *  `laneLabel` is included in the calendar event's title. */
+  pushEvent: (event: Event, laneLabel?: string) => void;
   /** Id of the event currently being pushed, if any. */
   pushingId: string | null;
   /** Last push failure, cleared on the next attempt. */
@@ -24,7 +25,7 @@ export function useCalendarPush(
   const [pushingId, setPushingId] = useState<string | null>(null);
   const [pushError, setPushError] = useState<string | null>(null);
 
-  const pushEvent = async (event: Event) => {
+  const pushEvent = async (event: Event, laneLabel?: string) => {
     if (pushingId) return;
     setPushingId(event.id);
     setPushError(null);
@@ -34,6 +35,7 @@ export function useCalendarPush(
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           title: event.title,
+          lane: laneLabel || undefined,
           start: event.start,
           end: event.end,
           note: event.note,

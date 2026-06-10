@@ -230,6 +230,7 @@ export default function SwimLaneRow({
               onStartEdit={() => interaction.onStartEdit(p.event.id)}
               onCommitEdit={(title) => interaction.onCommitEdit(p.event.id, title)}
               onCancelEdit={interaction.onCancelEdit}
+              onOpenNote={() => interaction.onOpenNote(p.event.id)}
               onResizeStart={(edge) => beginResize(p.event, edge)}
               onPointerDownBody={(e) => onEventPointerDown(p.event, e)}
             />
@@ -254,7 +255,7 @@ export default function SwimLaneRow({
         onPointerDown={onResizeRow}
         onDoubleClick={() => interaction.onSetLaneHeight(lane.id, 0)}
         title="Drag to resize row height · double-click to reset"
-        className="absolute bottom-0 left-0 right-0 z-20 h-1.5 cursor-row-resize touch-none hover:bg-blue-400/40 coarse:h-3"
+        className="absolute bottom-0 left-0 right-0 z-20 h-1.5 cursor-row-resize touch-none coarse:h-3"
       />
     </div>
   );

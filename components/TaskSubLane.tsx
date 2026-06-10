@@ -288,7 +288,7 @@ export default function TaskSubLane({
         onPointerDown={onResizeRow}
         onDoubleClick={() => interaction.onSetTaskHeight(task.id, 0)}
         title="Drag to resize row height · double-click to reset"
-        className="absolute bottom-0 left-0 right-0 z-20 h-1.5 cursor-row-resize touch-none hover:bg-blue-400/40 coarse:h-3"
+        className="absolute bottom-0 left-0 right-0 z-20 h-1.5 cursor-row-resize touch-none coarse:h-3"
       />
     </div>
   );

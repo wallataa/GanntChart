@@ -30,6 +30,11 @@ export interface Event {
   /** Original Google Calendar event id, when source === "gcal". */
   gcalId?: string;
   /**
+   * Raw hex fill for GCal events — the event's own Google color, falling back
+   * to its calendar's color. Takes precedence over `color` when rendering.
+   */
+  gcalColor?: string;
+  /**
    * Optional fixed height in px for this task's row in the weekly view (set by
    * dragging its bottom edge); taller content scrolls. Undefined = auto.
    */
@@ -85,8 +90,8 @@ export interface CalendarApiResponse {
   calendars: CalendarSource[];
 }
 
-/** Which top-level view is active. */
-export type ViewMode = "main" | "weekly";
+/** Which top-level view is active ("split" stacks weekly under the timeline). */
+export type ViewMode = "main" | "weekly" | "split";
 
 /** The user's whole board — the same shape as the undoable document. */
 export interface BoardDoc {
@@ -179,6 +184,8 @@ export interface GridInteraction {
   onCommitEdit: (eventId: string, title: string) => void;
   /** Abort the current inline edit without saving. */
   onCancelEdit: () => void;
+  /** Select the event and open its note editor (double-click the note badge). */
+  onOpenNote: (eventId: string) => void;
   /** Resize an event to a new inclusive [start, end] range. */
   onResize: (eventId: string, startISO: string, endISO: string) => void;
   /** Move an event to a new lane and/or date range (drag the body). */

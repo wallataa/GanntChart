@@ -11,6 +11,8 @@ const APP_CALENDAR_NAME = "Gantt Chart";
 
 interface PushBody {
   title?: string;
+  /** Swim-lane label, prefixed onto the calendar event's title. */
+  lane?: string;
   /** Inclusive ISO dates, matching the internal Event shape. */
   start?: string;
   end?: string;
@@ -40,7 +42,7 @@ export async function POST(req: NextRequest) {
   }
 
   const body = (await req.json().catch(() => ({}))) as PushBody;
-  const { title, start, end, note, pushed } = body;
+  const { title, lane, start, end, note, pushed } = body;
   if (!title || !start || !end || !ISO_DATE.test(start) || !ISO_DATE.test(end) || end < start) {
     return NextResponse.json({ error: "Invalid title/start/end" }, { status: 400 });
   }
@@ -49,9 +51,10 @@ export async function POST(req: NextRequest) {
   auth.setCredentials({ access_token: session.accessToken });
   const calendar = google.calendar({ version: "v3", auth });
 
-  // All-day events use an exclusive end date.
+  // All-day events use an exclusive end date. The swim-lane name prefixes the
+  // title so events group recognizably in Google Calendar.
   const requestBody: calendar_v3.Schema$Event = {
-    summary: title,
+    summary: lane ? `${lane}: ${title}` : title,
     description: note || undefined,
     start: { date: start },
     end: { date: shiftISODate(end, 1) },

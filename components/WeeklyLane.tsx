@@ -10,7 +10,7 @@ import {
   placeEvent,
   toISODate,
 } from "@/lib/dates";
-import { fillFor } from "@/lib/colors";
+import { fillFor, textOn } from "@/lib/colors";
 import { confirmDeleteLane, isLifeLane } from "@/lib/lanes";
 import { packEvents } from "@/lib/events";
 import TaskSubLane from "./TaskSubLane";
@@ -184,20 +184,25 @@ export default function WeeklyLane({
                 gridTemplateRows: `repeat(${lifePack.trackCount}, minmax(22px, auto))`,
               }}
             >
-              {lifePack.placed.map((p) => (
-                <div
-                  key={p.event.id}
-                  title={p.event.title}
-                  className="fs-11 m-[2px] flex items-center overflow-hidden rounded-[3px] border border-black/10 px-1.5 text-neutral-900"
-                  style={{
-                    gridColumn: `${p.colStart} / span ${p.span}`,
-                    gridRow: p.track,
-                    backgroundColor: fillFor(p.event.color ?? lane.color),
-                  }}
-                >
-                  <span className="truncate font-medium">{p.event.title}</span>
-                </div>
-              ))}
+              {lifePack.placed.map((p) => {
+                // GCal events carry their real Google color (may be dark).
+                const fill = p.event.gcalColor ?? fillFor(p.event.color ?? lane.color);
+                return (
+                  <div
+                    key={p.event.id}
+                    title={p.event.title}
+                    className="fs-11 m-[2px] flex items-center overflow-hidden rounded-[3px] border border-black/10 px-1.5 text-neutral-900"
+                    style={{
+                      gridColumn: `${p.colStart} / span ${p.span}`,
+                      gridRow: p.track,
+                      backgroundColor: fill,
+                      color: p.event.gcalColor ? textOn(fill) : undefined,
+                    }}
+                  >
+                    <span className="truncate font-medium">{p.event.title}</span>
+                  </div>
+                );
+              })}
             </div>
           </div>
         </div>

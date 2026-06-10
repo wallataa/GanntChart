@@ -18,3 +18,17 @@ export const COLOR_NAMES = Object.keys(PALETTE) as ColorName[];
 export function fillFor(color: ColorName | undefined): string {
   return (color && PALETTE[color]) || PALETTE.graytone;
 }
+
+/**
+ * Readable text color (near-black or near-white) for an arbitrary hex fill,
+ * by perceived brightness. Google Calendar colors can be dark, unlike the
+ * app's pastel palette.
+ */
+export function textOn(hex: string): string {
+  const m = /^#?([0-9a-f]{6})$/i.exec(hex.trim());
+  if (!m) return "#262626";
+  const n = parseInt(m[1], 16);
+  const brightness =
+    (((n >> 16) & 255) * 299 + ((n >> 8) & 255) * 587 + (n & 255) * 114) / 1000;
+  return brightness >= 140 ? "#262626" : "#fafafa";
+}

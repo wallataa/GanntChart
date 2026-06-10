@@ -2,7 +2,7 @@
 
 import type { PointerEvent as ReactPointerEvent } from "react";
 import type { Event, ResizeEdge, SwimLane } from "@/types";
-import { fillFor } from "@/lib/colors";
+import { fillFor, textOn } from "@/lib/colors";
 import { fromISODate } from "@/lib/dates";
 import { differenceInCalendarDays, format } from "date-fns";
 import { CalendarIcon, NoteIcon } from "./icons";
@@ -23,6 +23,8 @@ interface EventBlockProps {
   onStartEdit: () => void;
   onCommitEdit: (title: string) => void;
   onCancelEdit: () => void;
+  /** Open this event's note editor (double-click the note badge). */
+  onOpenNote: () => void;
   onResizeStart: (edge: ResizeEdge) => void;
   /** Pointer-down on the body begins a move-drag (or, if no movement, a select). */
   onPointerDownBody: (e: ReactPointerEvent) => void;
@@ -45,10 +47,13 @@ export default function EventBlock({
   onStartEdit,
   onCommitEdit,
   onCancelEdit,
+  onOpenNote,
   onResizeStart,
   onPointerDownBody,
 }: EventBlockProps) {
-  const fill = fillFor(event.color ?? lane.color);
+  // GCal events carry their real Google color (may be dark → adjust the text).
+  const fill = event.gcalColor ?? fillFor(event.color ?? lane.color);
+  const textColor = event.gcalColor ? textOn(fill) : undefined;
   const startLabel = format(fromISODate(event.start), "MMM d");
   const endLabel = format(fromISODate(event.end), "MMM d");
   const duration = differenceInCalendarDays(fromISODate(event.end), fromISODate(event.start)) + 1;
@@ -79,6 +84,7 @@ export default function EventBlock({
         gridColumn: `${colStart} / span ${span}`,
         gridRow: track,
         backgroundColor: fill,
+        color: textColor,
       }}
       title={editing ? undefined : tooltip}
       onPointerDown={editable && !editing ? onPointerDownBody : undefined}
@@ -106,7 +112,19 @@ export default function EventBlock({
           {/* Status badges: note + synced-to-calendar. Tooltip has the detail. */}
           {(event.note || event.pushed) && (
             <span className="ml-auto flex shrink-0 items-center gap-0.5 pl-1 text-neutral-700/70">
-              {event.note && <NoteIcon className="h-2.5 w-2.5" />}
+              {event.note && (
+                <span
+                  title="Double-click to edit the note"
+                  onPointerDown={(e) => e.stopPropagation()}
+                  onDoubleClick={(e) => {
+                    e.stopPropagation();
+                    onOpenNote();
+                  }}
+                  className="cursor-pointer"
+                >
+                  <NoteIcon className="h-2.5 w-2.5" />
+                </span>
+              )}
               {event.pushed && <CalendarIcon className="h-2.5 w-2.5" />}
             </span>
           )}

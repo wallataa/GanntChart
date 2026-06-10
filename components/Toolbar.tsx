@@ -54,6 +54,9 @@ interface ToolbarProps {
   selectedEvent: Event | null;
   onToggleDone: (eventId: string) => void;
   onSetNote: (eventId: string, note: string) => void;
+  /** Note editor popover state (also opened by double-clicking a note badge). */
+  noteOpen: boolean;
+  onNoteOpenChange: (open: boolean) => void;
   onPushEvent: (event: Event) => void;
   /** True while a push request is in flight. */
   pushing: boolean;
@@ -81,7 +84,7 @@ interface ToolbarProps {
   onOpenSettings: () => void;
 }
 
-const VIEW_LABELS: Record<ViewMode, string> = { main: "Timeline", weekly: "Weekly" };
+const VIEW_LABELS: Record<ViewMode, string> = { main: "Timeline", weekly: "Weekly", split: "Both" };
 
 const btn =
   "flex h-7 items-center justify-center rounded border border-neutral-300 px-2 text-sm hover:bg-neutral-50 dark:border-neutral-700 dark:hover:bg-neutral-800";
@@ -210,6 +213,8 @@ function EventActions({
   selectedEvent,
   onToggleDone,
   onSetNote,
+  noteOpen,
+  onNoteOpenChange,
   onPushEvent,
   pushing,
   pushError,
@@ -219,17 +224,18 @@ function EventActions({
   | "selectedEvent"
   | "onToggleDone"
   | "onSetNote"
+  | "noteOpen"
+  | "onNoteOpenChange"
   | "onPushEvent"
   | "pushing"
   | "pushError"
   | "signedIn"
 >) {
-  const [noteOpen, setNoteOpen] = useState(false);
   const event = selectedEvent!;
 
   const commitNote = (text: string) => {
     onSetNote(event.id, text);
-    setNoteOpen(false);
+    onNoteOpenChange(false);
   };
 
   return (
@@ -253,7 +259,7 @@ function EventActions({
       <div className="relative">
         <button
           type="button"
-          onClick={() => setNoteOpen((o) => !o)}
+          onClick={() => onNoteOpenChange(!noteOpen)}
           className={[
             btn,
             "gap-1 text-xs",
@@ -269,7 +275,7 @@ function EventActions({
         </button>
         {noteOpen && (
           <>
-            <div className="fixed inset-0 z-40" onClick={() => setNoteOpen(false)} />
+            <div className="fixed inset-0 z-40" onClick={() => onNoteOpenChange(false)} />
             <div className="absolute left-0 top-full z-50 mt-1 w-64 rounded-lg border border-neutral-200 bg-white p-2 shadow-xl dark:border-neutral-700 dark:bg-neutral-900">
               <textarea
                 autoFocus
@@ -277,7 +283,7 @@ function EventActions({
                 placeholder="Note for this event… (Esc to cancel)"
                 rows={4}
                 onKeyDown={(e) => {
-                  if (e.key === "Escape") setNoteOpen(false);
+                  if (e.key === "Escape") onNoteOpenChange(false);
                   else if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) {
                     commitNote(e.currentTarget.value);
                   }
@@ -414,7 +420,7 @@ function MoreMenu({
               />
               Hide done events
             </label>
-            {view === "weekly" && (
+            {view !== "main" && (
               <label className="flex cursor-pointer items-center gap-2 text-xs text-neutral-600 dark:text-neutral-300">
                 <input
                   type="checkbox"
@@ -536,6 +542,8 @@ export default function Toolbar({
   selectedEvent,
   onToggleDone,
   onSetNote,
+  noteOpen,
+  onNoteOpenChange,
   onPushEvent,
   pushing,
   pushError,
@@ -553,15 +561,17 @@ export default function Toolbar({
     <header className="mb-2 flex flex-wrap items-center gap-x-2 gap-y-2 sm:mb-3 sm:gap-x-3">
       <h1 className="hidden text-lg font-semibold tracking-tight md:block">Gantt Chart</h1>
 
-      {/* View switcher */}
+      {/* View switcher ("Both" stacks weekly under the timeline; it needs
+          vertical room, so it's hidden on small screens). */}
       <div className="flex h-7 overflow-hidden rounded border border-neutral-300 text-sm dark:border-neutral-700">
-        {(["main", "weekly"] as const).map((v) => (
+        {(["main", "weekly", "split"] as const).map((v) => (
           <button
             key={v}
             type="button"
             onClick={() => onViewChange(v)}
             className={[
               "px-3",
+              v === "split" ? "hidden md:block" : "",
               view === v
                 ? "bg-neutral-800 text-white dark:bg-neutral-100 dark:text-neutral-900"
                 : "bg-white hover:bg-neutral-50 dark:bg-neutral-950 dark:hover:bg-neutral-800",
@@ -654,15 +664,11 @@ export default function Toolbar({
           type="button"
           onClick={onFitRows}
           className={`${btn} ml-1 text-xs`}
-          title={
-            view === "main"
-              ? "Fit lanes to content (reset row heights)"
-              : "Fit task rows to content (reset row heights)"
-          }
+          title="Fit rows to content (reset row heights)"
         >
           Fit rows
         </button>
-        {view === "weekly" && (
+        {view !== "main" && (
           <label className="ml-1 flex cursor-pointer items-center gap-1.5 text-xs text-neutral-600 dark:text-neutral-300">
             <input
               type="checkbox"
@@ -692,6 +698,8 @@ export default function Toolbar({
             selectedEvent={selectedEvent}
             onToggleDone={onToggleDone}
             onSetNote={onSetNote}
+            noteOpen={noteOpen}
+            onNoteOpenChange={onNoteOpenChange}
             onPushEvent={onPushEvent}
             pushing={pushing}
             pushError={pushError}

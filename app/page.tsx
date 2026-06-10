@@ -35,6 +35,9 @@ export default function Home() {
   // Phones: drop the notes column and cap the label column so the date grid
   // gets most of the width. The user's saved widths come back on desktop.
   const isMobile = useIsMobile();
+  // The stacked split view needs vertical room — fall back to the timeline
+  // on phones (the "Both" switcher option is hidden there too).
+  const effectiveView: ViewMode = isMobile && view === "split" ? "main" : view;
   const sidebarNotesWidth = isMobile ? 0 : settings.sidebarNotesWidth;
   const sidebarLabelWidth = isMobile
     ? Math.min(96, settings.sidebarLabelWidth)
@@ -76,17 +79,18 @@ export default function Home() {
     [ctrl.manualEvents, ctrl.interaction.selectedEventId],
   );
 
-  // Date navigation acts on whichever view's window is active. Bumping `key`
-  // remounts the grid wrapper, replaying the directional CSS slide.
+  // Date navigation acts on whichever view's window is active (both windows
+  // in split view). Bumping `key` remounts the grid wrapper, replaying the
+  // directional CSS slide.
   const navigateWeeks = (weeks: number) => {
-    if (view === "weekly") setWeekRange((r) => shiftRange(r, weeks));
-    else setRange((r) => shiftRange(r, weeks));
+    if (effectiveView !== "main") setWeekRange((r) => shiftRange(r, weeks));
+    if (effectiveView !== "weekly") setRange((r) => shiftRange(r, weeks));
     setSlide((s) => ({ key: s.key + 1, dir: weeks < 0 ? "left" : "right" }));
   };
 
   const goToday = () => {
-    if (view === "weekly") setWeekRange(weeklyRange());
-    else setRange(defaultRange());
+    if (effectiveView !== "main") setWeekRange(weeklyRange());
+    if (effectiveView !== "weekly") setRange(defaultRange());
     setSlide((s) => ({ key: s.key + 1, dir: "none" }));
   };
 
@@ -95,12 +99,12 @@ export default function Home() {
     setSlide((s) => ({ key: s.key + 1, dir: "none" }));
   };
 
-  // Jump-to-date: re-anchor the active view's window at the picked day.
+  // Jump-to-date: re-anchor the active view's window(s) at the picked day.
   const jumpToDate = (iso: string) => {
     const d = fromISODate(iso);
     if (Number.isNaN(d.getTime())) return;
-    if (view === "weekly") setWeekRange(weeklyRange(d));
-    else setRange(defaultRange(d));
+    if (effectiveView !== "main") setWeekRange(weeklyRange(d));
+    if (effectiveView !== "weekly") setRange(defaultRange(d));
     setSlide((s) => ({ key: s.key + 1, dir: "none" }));
   };
 
@@ -110,11 +114,11 @@ export default function Home() {
   return (
     <main className="flex h-screen flex-col p-2 sm:p-4">
       <Toolbar
-        view={view}
+        view={effectiveView}
         onViewChange={changeView}
         onNavigateWeeks={navigateWeeks}
         onToday={goToday}
-        rangeLabel={formatRangeLabel(view === "weekly" ? weekRange : range)}
+        rangeLabel={formatRangeLabel(effectiveView === "weekly" ? weekRange : range)}
         onJumpToDate={jumpToDate}
         onUndo={ctrl.undo}
         onRedo={ctrl.redo}
@@ -122,7 +126,7 @@ export default function Home() {
         canRedo={ctrl.canRedo}
         fontScale={settings.fontScale}
         onFontScaleChange={settings.setFontScale}
-        onFitRows={() => ctrl.fitRows(view)}
+        onFitRows={() => ctrl.fitRows(effectiveView)}
         hideEmptyLanes={settings.hideEmptyLanes}
         onHideEmptyLanesChange={settings.setHideEmptyLanes}
         hideDone={settings.hideDone}
@@ -130,7 +134,11 @@ export default function Home() {
         selectedEvent={selectedEvent}
         onToggleDone={ctrl.toggleDone}
         onSetNote={ctrl.setNote}
-        onPushEvent={push.pushEvent}
+        noteOpen={ctrl.noteEditorOpen}
+        onNoteOpenChange={ctrl.setNoteEditorOpen}
+        onPushEvent={(event) =>
+          push.pushEvent(event, ctrl.lanes.find((l) => l.id === event.laneId)?.label)
+        }
         pushing={push.pushingId !== null}
         pushError={push.pushError}
         activeColor={ctrl.activeColor}
@@ -164,7 +172,9 @@ export default function Home() {
               } as CSSProperties
             }
           >
-            {view === "main" ? (
+            <div className="flex h-full flex-col gap-2">
+            {effectiveView !== "weekly" && (
+              <div className="min-h-0 flex-1">
               <GanttGrid
                 lanes={ctrl.lanes}
                 events={allEvents}
@@ -178,7 +188,10 @@ export default function Home() {
                 subtasks={ctrl.subtasks}
                 onToggleSubtask={ctrl.weeklyInteraction.onToggle}
               />
-            ) : (
+              </div>
+            )}
+            {effectiveView !== "main" && (
+              <div className="min-h-0 flex-1">
               <WeeklyView
                 lanes={ctrl.lanes}
                 events={allEvents}
@@ -199,7 +212,9 @@ export default function Home() {
                 onToggleSubtask={ctrl.weeklyInteraction.onToggle}
                 hideEmptyLanes={settings.hideEmptyLanes}
               />
+              </div>
             )}
+            </div>
           </div>
         ) : (
           <div className="p-8 text-sm text-neutral-400">Loading…</div>

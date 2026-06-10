@@ -41,8 +41,13 @@ export async function GET(req: NextRequest) {
   const timeMax = new Date(`${end}T23:59:59`).toISOString();
 
   try {
-    // 1. List calendars so the UI can offer toggles.
-    const listRes = await calendar.calendarList.list({ maxResults: 250 });
+    // 1. List calendars (for the UI toggles) and the user's color palette
+    //    (to resolve per-event colors) in parallel.
+    const [listRes, colorsRes] = await Promise.all([
+      calendar.calendarList.list({ maxResults: 250 }),
+      calendar.colors.get(),
+    ]);
+    const eventPalette = colorsRes.data.event ?? {};
     const calendars: CalendarSource[] = (listRes.data.items ?? []).map((c) => ({
       id: c.id ?? "",
       summary: c.summary ?? c.id ?? "Untitled",
@@ -56,6 +61,8 @@ export async function GET(req: NextRequest) {
     }));
 
     const sourceIds = calendars.filter((c) => c.enabled).map((c) => c.id);
+    // Calendar id -> its display color, the fallback when an event has none.
+    const calendarColors = new Map(calendars.map((c) => [c.id, c.backgroundColor]));
 
     // 2. Fetch events from each enabled calendar in parallel.
     const perCalendar = await Promise.all(
@@ -68,7 +75,9 @@ export async function GET(req: NextRequest) {
           orderBy: "startTime",
           maxResults: 2500,
         });
-        return (res.data.items ?? []).map((item) => mapGcalEvent(item, calId));
+        return (res.data.items ?? []).map((item) =>
+          mapGcalEvent(item, calId, eventPalette, calendarColors.get(calId)),
+        );
       }),
     );
 
@@ -87,10 +96,13 @@ function mapGcalEvent(
   item: {
     id?: string | null;
     summary?: string | null;
+    colorId?: string | null;
     start?: { date?: string | null; dateTime?: string | null } | null;
     end?: { date?: string | null; dateTime?: string | null } | null;
   },
   calId: string,
+  eventPalette: Record<string, { background?: string | null }>,
+  calendarColor: string | undefined,
 ): Event | null {
   if (!item.id || (!item.start?.date && !item.start?.dateTime)) return null;
 
@@ -103,6 +115,12 @@ function mapGcalEvent(
 
   if (!startISO) return null;
 
+  // The event's own Google color, else its calendar's color.
+  const gcalColor =
+    (item.colorId ? eventPalette[item.colorId]?.background : undefined) ??
+    calendarColor ??
+    undefined;
+
   return {
     id: `gcal:${calId}:${item.id}`,
     laneId: LIFE_LANE_ID,
@@ -111,6 +129,7 @@ function mapGcalEvent(
     end: endISO ?? startISO,
     source: "gcal",
     gcalId: item.id,
+    gcalColor,
   };
 }
 
