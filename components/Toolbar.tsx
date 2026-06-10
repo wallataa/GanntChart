@@ -123,7 +123,8 @@ function ColorControl({
   if (selection) {
     return (
       <div className="flex items-center gap-1.5">
-        <span className="text-xs font-medium text-blue-700 dark:text-blue-400">
+        {/* Label is noise on a phone — the swatches speak for themselves. */}
+        <span className="hidden text-xs font-medium text-blue-700 sm:inline dark:text-blue-400">
           {selection === "lane" ? "Lane color" : "Event color"}
         </span>
         {swatches}
@@ -245,9 +246,10 @@ function EventActions({
             : "text-neutral-500 dark:text-neutral-400",
         ].join(" ")}
         title={event.done ? "Mark not done" : "Mark done"}
+        aria-label={event.done ? "Mark not done" : "Mark done"}
       >
         <CheckIcon className="h-3.5 w-3.5" />
-        Done
+        <span className="hidden sm:inline">Done</span>
       </button>
 
       <div className="relative">
@@ -262,10 +264,11 @@ function EventActions({
               : "text-neutral-500 dark:text-neutral-400",
           ].join(" ")}
           title={event.note ? "Edit note" : "Add a note"}
+          aria-label={event.note ? "Edit note" : "Add a note"}
           aria-expanded={noteOpen}
         >
           <NoteIcon className="h-3.5 w-3.5" />
-          Note
+          <span className="hidden sm:inline">Note</span>
         </button>
         {noteOpen && (
           <>
@@ -315,9 +318,12 @@ function EventActions({
                 ? "Update this event in your Gantt Chart calendar"
                 : "Push to your Gantt Chart calendar in Google Calendar"
         }
+        aria-label={event.pushed ? "Update in Google Calendar" : "Push to Google Calendar"}
       >
         <CalendarIcon className="h-3.5 w-3.5" />
-        {pushing ? "Pushing…" : event.pushed ? "Update" : "Push"}
+        <span className="hidden sm:inline">
+          {pushing ? "Pushing…" : event.pushed ? "Update" : "Push"}
+        </span>
       </button>
     </div>
   );
