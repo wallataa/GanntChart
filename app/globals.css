@@ -18,11 +18,15 @@ body {
     sans-serif;
 }
 
-/* Touch: no tap highlight flash, and no 300ms double-tap-zoom delay on the
-   interactive surfaces (double-tap still fires dblclick for rename/subtasks;
-   pinch-zoom and panning keep working). Drag handles opt out via touch-none. */
+/* Touch: no tap highlight flash, and no pinch/double-tap zoom anywhere —
+   iOS ignores user-scalable=no, but it honors touch-action, and zoom is only
+   allowed when every element in the touched chain allows it, so blocking it
+   on <html> covers the whole page (double-tap still fires dblclick for
+   rename/subtasks; panning keeps working). Drag handles opt out of panning
+   too via touch-none. */
 html {
   -webkit-tap-highlight-color: transparent;
+  touch-action: pan-x pan-y;
 }
 button,
 input,
@@ -30,6 +34,13 @@ textarea,
 label,
 .gantt-scroll {
   touch-action: manipulation;
+}
+
+/* Full-height app frame. Prefers the dynamic viewport unit so the bottom of
+   the grid isn't hidden behind mobile browser chrome (URL bar / toolbars). */
+.app-shell {
+  height: 100vh;
+  height: 100dvh;
 }
 
 /* Font-size scale (toolbar − / +). The grid wrapper sets the `--fs` CSS var;

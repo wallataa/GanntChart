@@ -32,13 +32,17 @@ export default function Home() {
   // Persisted view settings (column widths, font scale, sidebar widths, …).
   const settings = useViewSettings();
 
-  // Phones: drop the notes column and cap the label column so the date grid
-  // gets most of the width. The user's saved widths come back on desktop.
+  // Phones: drop the notes column, cap the label column, and shrink the weekly
+  // day columns so most of a week fits the screen without zooming. The user's
+  // saved widths come back on desktop.
   const isMobile = useIsMobile();
   const sidebarNotesWidth = isMobile ? 0 : settings.sidebarNotesWidth;
   const sidebarLabelWidth = isMobile
     ? Math.min(96, settings.sidebarLabelWidth)
     : settings.sidebarLabelWidth;
+  const weekColumnWidth = isMobile
+    ? Math.min(48, settings.weekColumnWidth)
+    : settings.weekColumnWidth;
 
   // Google Calendar events for the Life lane.
   const calendar = useCalendarSync(range);
@@ -108,7 +112,7 @@ export default function Home() {
     slide.dir === "left" ? "anim-left" : slide.dir === "right" ? "anim-right" : "anim-none";
 
   return (
-    <main className="flex h-screen flex-col p-2 sm:p-4">
+    <main className="app-shell flex flex-col p-2 sm:p-4">
       <Toolbar
         view={view}
         onViewChange={changeView}
@@ -185,7 +189,7 @@ export default function Home() {
                 range={weekRange}
                 subtasks={ctrl.subtasks}
                 interaction={ctrl.weeklyInteraction}
-                columnWidth={settings.weekColumnWidth}
+                columnWidth={weekColumnWidth}
                 onColumnWidthChange={settings.setWeekColumnWidth}
                 sidebarNotesWidth={sidebarNotesWidth}
                 sidebarLabelWidth={sidebarLabelWidth}

@@ -233,7 +233,7 @@ function EventActions({
   };
 
   return (
-    <div className="flex items-center gap-1">
+    <div className="flex flex-wrap items-center gap-1">
       <button
         type="button"
         onClick={() => onToggleDone(event.id)}
@@ -684,8 +684,10 @@ export default function Toolbar({
         </label>
       </div>
 
-      {/* Color (contextual: recolors the selection, else sets the default). */}
-      <div className="flex items-center gap-2 border-l border-neutral-200 pl-3 dark:border-neutral-800">
+      {/* Color (contextual: recolors the selection, else sets the default).
+          Wraps internally so the swatches + event actions never push the page
+          wider than a phone screen (which would re-enable zoom-out). */}
+      <div className="flex min-w-0 flex-wrap items-center gap-2 border-l border-neutral-200 pl-3 dark:border-neutral-800">
         <ColorControl activeColor={activeColor} onApplyColor={onApplyColor} selection={selection} />
         {selection === "event" && selectedEvent && (
           <EventActions
