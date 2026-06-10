@@ -80,6 +80,16 @@ export function isMonthStart(date: Date): boolean {
   return date.getDate() === 1;
 }
 
+/**
+ * Shift an ISO `YYYY-MM-DD` date by `days`. Pure string/UTC math, so it's safe
+ * on the server in any timezone (used by the calendar routes and key-nudging).
+ */
+export function shiftISODate(iso: string, days: number): string {
+  const d = new Date(`${iso}T00:00:00Z`);
+  d.setUTCDate(d.getUTCDate() + days);
+  return d.toISOString().slice(0, 10);
+}
+
 /** Human label for the visible window, e.g. "Jun 10 – Jul 22, 2026". */
 export function formatRangeLabel(range: DateRange): string {
   const sameYear = range.start.getFullYear() === range.end.getFullYear();

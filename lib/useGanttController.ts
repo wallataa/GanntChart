@@ -15,6 +15,7 @@ import { DEFAULT_LANES, isLifeLane, loadLanes, pinLifeLast, saveLanes } from "./
 import { loadEvents, saveEvents } from "./events";
 import { loadSubtasks, saveSubtasks } from "./subtasks";
 import { newId } from "./id";
+import { shiftISODate } from "./dates";
 import { useHistory, type Doc } from "./useHistory";
 
 export interface GanttController {
@@ -60,6 +61,19 @@ export interface GanttController {
   ) => void;
   /** Toolbar "Fit rows": reset manual row heights for the active view to auto. */
   fitRows: (view: ViewMode) => void;
+
+  /** Toggle an event's completed state (dimmed + struck through). */
+  toggleDone: (id: string) => void;
+  /** Set / clear an event's free-form note (empty string clears). */
+  setNote: (id: string, note: string) => void;
+  /** Record that an event now exists in the app's Google Calendar. */
+  markPushed: (id: string, pushed: { calendarId: string; eventId: string }) => void;
+
+  /**
+   * Replace the whole document with a board loaded from account storage.
+   * Clears the undo history and selection (the old entities may not exist).
+   */
+  replaceDoc: (next: Doc) => void;
 }
 
 /** Normalize a dragged [start, end] so start <= end. */
@@ -102,6 +116,22 @@ export function useGanttController(): GanttController {
   useEffect(() => {
     reset({ lanes: loadLanes(), events: loadEvents(), subtasks: loadSubtasks() });
   }, [reset]);
+
+  // Adopt a board loaded from account storage: not undoable (reset), but
+  // persisted locally so localStorage mirrors the synced copy.
+  const replaceDoc = useCallback(
+    (next: Doc) => {
+      const adopted = { ...next, lanes: pinLifeLast(next.lanes) };
+      reset(adopted);
+      persistDoc(adopted);
+      setSelectedEventId(null);
+      setSelectedLaneId(null);
+      setEditingEventId(null);
+      setSubEditing(null);
+      setDraftEvent(null);
+    },
+    [reset, persistDoc],
+  );
 
   const persistEvents = (next: Event[]) => commit({ ...doc, events: next });
   const persistSubtasks = (next: Subtask[]) => commit({ ...doc, subtasks: next });
@@ -165,6 +195,26 @@ export function useGanttController(): GanttController {
     persistEvents(manualEvents.map((e) => (e.id === id ? { ...e, start, end } : e)));
   };
 
+  // Keyboard nudge: arrows shift the whole event ±1 day; Shift+arrows grow /
+  // shrink it by moving the end date (never below the start).
+  const nudgeEvent = (id: string, days: 1 | -1, resize: boolean) => {
+    const ev = manualEvents.find((e) => e.id === id);
+    if (!ev) return;
+    if (resize) {
+      const end = shiftISODate(ev.end, days);
+      if (end < ev.start) return;
+      persistEvents(manualEvents.map((e) => (e.id === id ? { ...e, end } : e)));
+    } else {
+      persistEvents(
+        manualEvents.map((e) =>
+          e.id === id
+            ? { ...e, start: shiftISODate(e.start, days), end: shiftISODate(e.end, days) }
+            : e,
+        ),
+      );
+    }
+  };
+
   const moveEvent = (id: string, laneId: string, startISO: string, endISO: string) => {
     persistEvents(
       manualEvents.map((e) => (e.id === id ? { ...e, laneId, start: startISO, end: endISO } : e)),
@@ -200,6 +250,19 @@ export function useGanttController(): GanttController {
     setSelectedEventId(id);
     setSelectedLaneId(null);
   };
+
+  const toggleDone = (id: string) =>
+    persistEvents(manualEvents.map((e) => (e.id === id ? { ...e, done: !e.done } : e)));
+
+  const setNote = (id: string, note: string) => {
+    const text = note.trim();
+    persistEvents(
+      manualEvents.map((e) => (e.id === id ? { ...e, note: text || undefined } : e)),
+    );
+  };
+
+  const markPushed = (id: string, pushed: { calendarId: string; eventId: string }) =>
+    persistEvents(manualEvents.map((e) => (e.id === id ? { ...e, pushed } : e)));
 
   const selectEvent = (id: string) => {
     setSelectedEventId(id);
@@ -347,6 +410,16 @@ export function useGanttController(): GanttController {
       } else if ((e.key === "Delete" || e.key === "Backspace") && !typing && selectedEventId) {
         e.preventDefault();
         deleteEvent(selectedEventId);
+      } else if (
+        (e.key === "ArrowLeft" || e.key === "ArrowRight") &&
+        !typing &&
+        selectedEventId &&
+        !e.ctrlKey &&
+        !e.metaKey &&
+        !e.altKey
+      ) {
+        e.preventDefault();
+        nudgeEvent(selectedEventId, e.key === "ArrowRight" ? 1 : -1, e.shiftKey);
       }
     };
     window.addEventListener("keydown", onKey);
@@ -417,5 +490,9 @@ export function useGanttController(): GanttController {
     clearAll,
     moveTask,
     fitRows,
+    toggleDone,
+    setNote,
+    markPushed,
+    replaceDoc,
   };
 }

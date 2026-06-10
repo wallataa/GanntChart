@@ -5,6 +5,7 @@ import type { Event, ResizeEdge, SwimLane } from "@/types";
 import { fillFor } from "@/lib/colors";
 import { fromISODate } from "@/lib/dates";
 import { differenceInCalendarDays, format } from "date-fns";
+import { CalendarIcon, NoteIcon } from "./icons";
 
 interface EventBlockProps {
   event: Event;
@@ -54,6 +55,14 @@ export default function EventBlock({
   const range =
     event.start === event.end ? startLabel : `${startLabel} – ${endLabel} · ${duration}d`;
   const editable = event.source === "manual";
+  const tooltip = [
+    `${event.title} (${range})`,
+    event.done ? "✓ done" : null,
+    event.pushed ? "synced to Google Calendar" : null,
+    event.note,
+  ]
+    .filter(Boolean)
+    .join("\n");
 
   return (
     <div
@@ -61,6 +70,7 @@ export default function EventBlock({
         "group fs-10 pointer-events-auto relative m-[2px] flex items-center overflow-hidden rounded border px-1 leading-tight text-neutral-800 select-none",
         selected ? "border-blue-500 shadow-sm ring-2 ring-blue-400" : "border-black/15",
         dragging ? "opacity-80 shadow-lg" : "",
+        event.done && !dragging ? "opacity-50 saturate-50" : "",
         editable && !editing
           ? "cursor-grab hover:shadow-sm hover:brightness-95 active:cursor-grabbing"
           : "",
@@ -70,7 +80,7 @@ export default function EventBlock({
         gridRow: track,
         backgroundColor: fill,
       }}
-      title={editing ? undefined : `${event.title} (${range})`}
+      title={editing ? undefined : tooltip}
       onPointerDown={editable && !editing ? onPointerDownBody : undefined}
       onDoubleClick={editable ? onStartEdit : undefined}
     >
@@ -89,7 +99,18 @@ export default function EventBlock({
           onBlur={(e) => onCommitEdit(e.currentTarget.value)}
         />
       ) : (
-        <span className="truncate">{event.title}</span>
+        <>
+          <span className={["truncate", event.done ? "line-through" : ""].join(" ")}>
+            {event.title}
+          </span>
+          {/* Status badges: note + synced-to-calendar. Tooltip has the detail. */}
+          {(event.note || event.pushed) && (
+            <span className="ml-auto flex shrink-0 items-center gap-0.5 pl-1 text-neutral-700/70">
+              {event.note && <NoteIcon className="h-2.5 w-2.5" />}
+              {event.pushed && <CalendarIcon className="h-2.5 w-2.5" />}
+            </span>
+          )}
+        </>
       )}
 
       {/* Resize handles (manual events only). Visible on hover / when selected. */}

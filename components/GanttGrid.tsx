@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
+import { useCallback, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
 import { addDays } from "date-fns";
 import type { DateRange, Event, GridInteraction, Subtask, SwimLane } from "@/types";
 import { columnCount, columnIndex, fromISODate, toISODate } from "@/lib/dates";
@@ -55,8 +55,12 @@ export default function GanttGrid({
 }: GanttGridProps) {
   const total = columnCount(range);
 
+  // The scrollable surface, for edge auto-scroll during drags.
+  const scrollRef = useRef<HTMLDivElement | null>(null);
+  const getScroll = useCallback(() => scrollRef.current, []);
+
   const { registerLane, onLanePointerDown, orderedLanes, draggingLaneId, laneAtY } =
-    useLaneReorder(lanes, interaction.onReorderLanes);
+    useLaneReorder(lanes, interaction.onReorderLanes, getScroll);
 
   const [movePreview, setMovePreview] = useState<MovePreview | null>(null);
   const previewRef = useRef<MovePreview | null>(null);
@@ -75,6 +79,7 @@ export default function GanttGrid({
 
     startDrag(e, {
       threshold: DRAG_THRESHOLD,
+      scrollContainer: getScroll,
       onMove: (ev) => {
         const hit = laneAtY(ev.clientY);
         const laneId = hit?.lane.id ?? event.laneId;
@@ -107,7 +112,10 @@ export default function GanttGrid({
     : events;
 
   return (
-    <div className="gantt-scroll h-full overflow-auto border border-neutral-300 dark:border-neutral-700">
+    <div
+      ref={scrollRef}
+      className="gantt-scroll h-full overflow-auto border border-neutral-300 dark:border-neutral-700"
+    >
       <div className="w-max min-w-full">
         <DateHeader
           range={range}

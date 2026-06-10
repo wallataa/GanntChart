@@ -1,12 +1,20 @@
 import type { NextAuthOptions } from "next-auth";
 import GoogleProvider from "next-auth/providers/google";
+import CredentialsProvider from "next-auth/providers/credentials";
+import { getUser, kvConfigured, verifyPassword } from "./users";
 
-/** Google OAuth scope required to read calendar events (SPEC.md). */
+/**
+ * Google OAuth scopes: calendar access for the Life lane and "push to
+ * calendar", plus drive.appdata so the board can sync to a hidden app folder
+ * in the user's Drive (the no-database storage backend). Users who connected
+ * under older, narrower scopes must sign out and back in to re-consent.
+ */
 const GOOGLE_SCOPES = [
   "openid",
   "email",
   "profile",
-  "https://www.googleapis.com/auth/calendar.readonly",
+  "https://www.googleapis.com/auth/calendar",
+  "https://www.googleapis.com/auth/drive.appdata",
 ].join(" ");
 
 /**
@@ -59,13 +67,30 @@ export const authOptions: NextAuthOptions = {
         },
       },
     }),
+    // Email/password accounts (stored in Vercel KV — see lib/users.ts). These
+    // sessions have no Google access token, so calendar features are
+    // unavailable and the board syncs via the KV backend.
+    CredentialsProvider({
+      name: "Email",
+      credentials: {
+        email: { label: "Email", type: "email" },
+        password: { label: "Password", type: "password" },
+      },
+      async authorize(credentials) {
+        if (!kvConfigured() || !credentials?.email || !credentials.password) return null;
+        const user = await getUser(credentials.email);
+        if (!user || !verifyPassword(credentials.password, user.passwordHash)) return null;
+        return { id: user.email, email: user.email };
+      },
+    }),
   ],
   secret: process.env.NEXTAUTH_SECRET,
   session: { strategy: "jwt" },
+  pages: { signIn: "/signin" },
   callbacks: {
     async jwt({ token, account }) {
-      // Initial sign-in: persist tokens from the Google account.
-      if (account) {
+      // Initial Google sign-in: persist its tokens for the calendar APIs.
+      if (account?.provider === "google") {
         return {
           ...token,
           accessToken: account.access_token,
@@ -75,7 +100,9 @@ export const authOptions: NextAuthOptions = {
             : Date.now() + 3600 * 1000,
         };
       }
-      // Still valid — reuse it.
+      // Credentials sign-in / non-Google session: nothing to refresh.
+      if (account || !token.accessToken) return token;
+      // Google session still valid — reuse it.
       if (token.expiresAt && Date.now() < token.expiresAt - 60_000) {
         return token;
       }

@@ -34,6 +34,8 @@ export interface LaneReorder {
 export function useLaneReorder(
   lanes: SwimLane[],
   onReorderLanes: (from: number, to: number) => void,
+  /** Scrollable grid container, for edge auto-scroll while dragging. */
+  scrollContainer?: () => HTMLElement | null | undefined,
 ): LaneReorder {
   const laneRefs = useRef<Map<string, HTMLElement>>(new Map());
   const registerLane = useCallback((laneId: string, el: HTMLElement | null) => {
@@ -84,6 +86,7 @@ export function useLaneReorder(
     if (!lane || isLifeLane(lane)) return; // Life lane is locked.
     startDrag(e, {
       threshold: DRAG_THRESHOLD,
+      scrollContainer,
       onActivate: () => setDraggingLaneId(laneId),
       onMove: (ev) => setPreviewOrder(orderForDrag(laneId, ev.clientY)),
       onUp: (_ev, activated) => {

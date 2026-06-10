@@ -114,6 +114,19 @@ export function LockIcon(p: IconProps) {
   );
 }
 
+export function CheckIcon(p: IconProps) {
+  return <Icon {...p}><path d="M20 6 9 17l-5-5" /></Icon>;
+}
+
+export function NoteIcon(p: IconProps) {
+  return (
+    <Icon {...p}>
+      <path d="M16 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V8Z" />
+      <path d="M15 3v4a2 2 0 0 0 2 2h4" />
+    </Icon>
+  );
+}
+
 export function SunIcon(p: IconProps) {
   return (
     <Icon {...p}>

@@ -35,6 +35,9 @@ export interface ViewSettings {
   /** Weekly view: hide lanes with nothing in the visible fortnight. */
   hideEmptyLanes: boolean;
   setHideEmptyLanes: (hide: boolean) => void;
+  /** Filter completed events out of both views. */
+  hideDone: boolean;
+  setHideDone: (hide: boolean) => void;
   /** Color theme. Applied as a `dark` class on <html> (Tailwind class mode). */
   theme: Theme;
   setTheme: (theme: Theme) => void;
@@ -67,6 +70,7 @@ export function useViewSettings(): ViewSettings {
     clampLabelWidth,
   );
   const [hideEmptyLanes, setHideEmptyLanes] = usePersistedState("gantt:hideEmptyWeekly", false);
+  const [hideDone, setHideDone] = usePersistedState("gantt:hideDone", false);
   const [theme, setTheme] = usePersistedState<Theme>("gantt:theme", "light", (t) =>
     t === "dark" ? "dark" : "light",
   );
@@ -93,6 +97,8 @@ export function useViewSettings(): ViewSettings {
     setSidebarWidth,
     hideEmptyLanes,
     setHideEmptyLanes,
+    hideDone,
+    setHideDone,
     theme,
     setTheme,
   };

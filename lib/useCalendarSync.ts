@@ -28,6 +28,10 @@ export interface CalendarSync {
  */
 export function useCalendarSync(range: DateRange): CalendarSync {
   const { data: session } = useSession();
+  // Calendar features need a Google access token — email/password sessions
+  // don't have one, so for them the Life lane stays empty (no failed fetches).
+  const hasGoogle =
+    Boolean(session?.accessToken) && session?.error !== "RefreshAccessTokenError";
   const [events, setEvents] = useState<Event[]>([]);
   const [calendars, setCalendars] = useState<CalendarSource[]>([]);
   // null = server defaults; a concrete list once the user has toggled.
@@ -41,7 +45,7 @@ export function useCalendarSync(range: DateRange): CalendarSync {
   );
 
   useEffect(() => {
-    if (!session) {
+    if (!hasGoogle) {
       setEvents([]);
       return;
     }
@@ -74,7 +78,8 @@ export function useCalendarSync(range: DateRange): CalendarSync {
       }
     })();
     return () => controller.abort();
-  }, [session, range, enabledOverride]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hasGoogle, range, enabledOverride]);
 
   const toggleCalendar = (id: string, enabled: boolean) =>
     setEnabledOverride(
@@ -90,7 +95,7 @@ export function useCalendarSync(range: DateRange): CalendarSync {
     calendars,
     enabledCalendarIds,
     toggleCalendar,
-    signedIn: Boolean(session),
+    signedIn: hasGoogle,
     syncing,
     error,
   };

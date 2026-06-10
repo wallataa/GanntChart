@@ -79,8 +79,12 @@ export default function WeeklyView({
           subtasks.some((s) => s.taskId === e.id && isWithinRange(s.date, range))),
     );
 
+  // The scrollable surface, for edge auto-scroll during drags.
+  const scrollRef = useRef<HTMLDivElement | null>(null);
+  const getScroll = useCallback(() => scrollRef.current, []);
+
   const { registerLane, onLanePointerDown, orderedLanes, draggingLaneId, laneAtY } =
-    useLaneReorder(lanes, onReorderLanes);
+    useLaneReorder(lanes, onReorderLanes, getScroll);
 
   // taskId -> task row element, for reorder/move hit-testing.
   const taskRefs = useRef<Map<string, HTMLElement>>(new Map());
@@ -127,6 +131,7 @@ export default function WeeklyView({
     const startX = e.clientX;
     startDrag(e, {
       threshold: DRAG_THRESHOLD,
+      scrollContainer: getScroll,
       onActivate: () => setTaskDragId(task.id),
       onMove: (ev) => {
         taskDropRef.current = dropTargetFor(task.id, ev.clientY);
@@ -160,7 +165,10 @@ export default function WeeklyView({
   const visibleLanes = orderedLanes.filter((lane) => !hideEmptyLanes || laneHasContent(lane));
 
   return (
-    <div className="gantt-scroll h-full overflow-auto border border-neutral-300 dark:border-neutral-700">
+    <div
+      ref={scrollRef}
+      className="gantt-scroll h-full overflow-auto border border-neutral-300 dark:border-neutral-700"
+    >
       <div className="w-max min-w-full">
         <DateHeader
           range={range}

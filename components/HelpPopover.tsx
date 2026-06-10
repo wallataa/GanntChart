@@ -14,6 +14,7 @@ const SECTIONS: { title: string; items: [string, string][] }[] = [
       ["Recolor", "click an event or lane label, then a color swatch"],
       ["Rename a lane", "double-click its label"],
       ["Lane notes", "click the notes column to edit, one per line"],
+      ["Done / note / push", "select an event, then use the toolbar buttons"],
     ],
   },
   {
@@ -31,6 +32,8 @@ const SECTIONS: { title: string; items: [string, string][] }[] = [
       ["Reorder lanes", "drag a lane's grip handle"],
       ["Column width", "drag a column edge in the date header"],
       ["Row height", "drag a row's bottom edge (double-click resets)"],
+      ["Jump to a date", "click the date range in the toolbar"],
+      ["Nudge dates", "←/→ move the selected event; Shift+←/→ resize it"],
       ["Undo / redo", "Ctrl+Z / Ctrl+Y"],
       ["Delete selection", "Delete or Backspace"],
       ["Clear selection", "Esc"],

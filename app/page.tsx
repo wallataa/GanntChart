@@ -2,9 +2,17 @@
 
 import { useMemo, useState, type CSSProperties } from "react";
 import type { DateRange, ViewMode } from "@/types";
-import { defaultRange, formatRangeLabel, shiftRange, weeklyRange } from "@/lib/dates";
+import {
+  defaultRange,
+  formatRangeLabel,
+  fromISODate,
+  shiftRange,
+  weeklyRange,
+} from "@/lib/dates";
 import { useGanttController } from "@/lib/useGanttController";
 import { useCalendarSync } from "@/lib/useCalendarSync";
+import { useCalendarPush } from "@/lib/useCalendarPush";
+import { useBoardSync } from "@/lib/useBoardSync";
 import { useViewSettings } from "@/lib/useViewSettings";
 import Toolbar from "@/components/Toolbar";
 import GanttGrid from "@/components/GanttGrid";
@@ -26,6 +34,16 @@ export default function Home() {
   // Google Calendar events for the Life lane.
   const calendar = useCalendarSync(range);
 
+  // Push selected events into the dedicated "Gantt Chart" Google Calendar.
+  const push = useCalendarPush(ctrl.markPushed);
+
+  // Account board sync: while signed in, the document mirrors to Drive / KV.
+  const boardDoc = useMemo(
+    () => ({ lanes: ctrl.lanes, events: ctrl.manualEvents, subtasks: ctrl.subtasks }),
+    [ctrl.lanes, ctrl.manualEvents, ctrl.subtasks],
+  );
+  const boardSync = useBoardSync(boardDoc, ctrl.replaceDoc);
+
   const [settingsOpen, setSettingsOpen] = useState(false);
 
   // Slide-animation state for date navigation. `key` forces a remount to replay
@@ -35,13 +53,18 @@ export default function Home() {
     dir: "none",
   });
 
-  const allEvents = useMemo(
-    () => [
+  const allEvents = useMemo(() => {
+    const events = [
       ...ctrl.manualEvents,
       ...calendar.events,
       ...(ctrl.draftEvent ? [ctrl.draftEvent] : []),
-    ],
-    [ctrl.manualEvents, calendar.events, ctrl.draftEvent],
+    ];
+    return settings.hideDone ? events.filter((e) => !e.done) : events;
+  }, [ctrl.manualEvents, calendar.events, ctrl.draftEvent, settings.hideDone]);
+
+  const selectedEvent = useMemo(
+    () => ctrl.manualEvents.find((e) => e.id === ctrl.interaction.selectedEventId) ?? null,
+    [ctrl.manualEvents, ctrl.interaction.selectedEventId],
   );
 
   // Date navigation acts on whichever view's window is active. Bumping `key`
@@ -63,6 +86,15 @@ export default function Home() {
     setSlide((s) => ({ key: s.key + 1, dir: "none" }));
   };
 
+  // Jump-to-date: re-anchor the active view's window at the picked day.
+  const jumpToDate = (iso: string) => {
+    const d = fromISODate(iso);
+    if (Number.isNaN(d.getTime())) return;
+    if (view === "weekly") setWeekRange(weeklyRange(d));
+    else setRange(defaultRange(d));
+    setSlide((s) => ({ key: s.key + 1, dir: "none" }));
+  };
+
   const slideClass =
     slide.dir === "left" ? "anim-left" : slide.dir === "right" ? "anim-right" : "anim-none";
 
@@ -74,6 +106,7 @@ export default function Home() {
         onNavigateWeeks={navigateWeeks}
         onToday={goToday}
         rangeLabel={formatRangeLabel(view === "weekly" ? weekRange : range)}
+        onJumpToDate={jumpToDate}
         onUndo={ctrl.undo}
         onRedo={ctrl.redo}
         canUndo={ctrl.canUndo}
@@ -83,6 +116,14 @@ export default function Home() {
         onFitRows={() => ctrl.fitRows(view)}
         hideEmptyLanes={settings.hideEmptyLanes}
         onHideEmptyLanesChange={settings.setHideEmptyLanes}
+        hideDone={settings.hideDone}
+        onHideDoneChange={settings.setHideDone}
+        selectedEvent={selectedEvent}
+        onToggleDone={ctrl.toggleDone}
+        onSetNote={ctrl.setNote}
+        onPushEvent={push.pushEvent}
+        pushing={push.pushingId !== null}
+        pushError={push.pushError}
         activeColor={ctrl.activeColor}
         onApplyColor={ctrl.applyColor}
         selection={
@@ -91,6 +132,9 @@ export default function Home() {
         signedIn={calendar.signedIn}
         syncing={calendar.syncing}
         syncError={calendar.error}
+        boardStatus={boardSync.status}
+        boardBackend={boardSync.backend}
+        boardError={boardSync.error}
         theme={settings.theme}
         onThemeChange={settings.setTheme}
         onOpenSettings={() => setSettingsOpen(true)}

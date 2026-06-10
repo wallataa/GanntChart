@@ -9,7 +9,7 @@ import { useRowHeightDrag } from "@/lib/useRowHeightDrag";
 import SubtaskItem from "./SubtaskItem";
 import SubtaskChecklist from "./SubtaskChecklist";
 import DayColumns from "./DayColumns";
-import { GripIcon } from "./icons";
+import { CalendarIcon, GripIcon } from "./icons";
 
 interface TaskSubLaneProps {
   task: Event;
@@ -148,10 +148,17 @@ export default function TaskSubLane({
               <span className="w-2 shrink-0 text-[8px] leading-none text-neutral-400">
                 {todosOpen ? "▼" : "▶"}
               </span>
-              <span className="truncate">{task.title}</span>
+              <span className={["truncate", task.done ? "line-through opacity-60" : ""].join(" ")}>
+                {task.title}
+              </span>
             </button>
           ) : (
-            <span className="fs-12 min-w-0 flex-1 font-medium leading-snug text-neutral-800 dark:text-neutral-200">
+            <span
+              className={[
+                "fs-12 min-w-0 flex-1 font-medium leading-snug text-neutral-800 dark:text-neutral-200",
+                task.done ? "line-through opacity-60" : "",
+              ].join(" ")}
+            >
               {task.title}
             </span>
           )}
@@ -191,6 +198,7 @@ export default function TaskSubLane({
                 "flex items-center overflow-hidden rounded-[3px] border px-1.5 py-px text-left select-none",
                 manual ? "cursor-grab active:cursor-grabbing" : "",
                 selected ? "border-blue-500 ring-2 ring-blue-400" : "border-black/10",
+                task.done ? "opacity-50 saturate-50" : "",
               ].join(" ")}
               style={{
                 gridColumn: `${placement.colStart + 1} / span ${placement.span}`,
@@ -198,9 +206,22 @@ export default function TaskSubLane({
                 transform: barOffset ? `translateX(${barOffset}px)` : undefined,
               }}
             >
-              <span className="fs-11 truncate font-medium text-neutral-900 dark:text-neutral-50">
+              <span
+                className={[
+                  "fs-11 truncate font-medium text-neutral-900 dark:text-neutral-50",
+                  task.done ? "line-through" : "",
+                ].join(" ")}
+              >
                 {task.title}
               </span>
+              {task.pushed && (
+                <span
+                  className="ml-auto shrink-0 pl-1 text-neutral-700/70 dark:text-neutral-300/70"
+                  title="Synced to Google Calendar"
+                >
+                  <CalendarIcon className="h-2.5 w-2.5" />
+                </span>
+              )}
             </div>
           </div>
         )}

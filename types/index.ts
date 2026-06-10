@@ -34,6 +34,12 @@ export interface Event {
    * dragging its bottom edge); taller content scrolls. Undefined = auto.
    */
   rowHeight?: number;
+  /** Marks the event completed (rendered dimmed + struck through). */
+  done?: boolean;
+  /** Free-form note, shown in the tooltip and the toolbar note editor. */
+  note?: string;
+  /** Set once the event has been pushed to the app's Google Calendar. */
+  pushed?: { calendarId: string; eventId: string };
 }
 
 /** A horizontal band (project / category). */
@@ -81,6 +87,29 @@ export interface CalendarApiResponse {
 
 /** Which top-level view is active. */
 export type ViewMode = "main" | "weekly";
+
+/** The user's whole board — the same shape as the undoable document. */
+export interface BoardDoc {
+  lanes: SwimLane[];
+  events: Event[];
+  subtasks: Subtask[];
+}
+
+/** A board as persisted to account storage (Drive / database). */
+export interface StoredBoard {
+  doc: BoardDoc;
+  /** Epoch ms of the save, for last-write-wins reconciliation. */
+  updatedAt: number;
+}
+
+/** Where the signed-in user's board is persisted server-side. */
+export type BoardBackend = "drive" | "kv";
+
+/** Shape returned by GET /api/board. */
+export interface BoardApiResponse {
+  board: StoredBoard | null;
+  backend: BoardBackend;
+}
 
 /** A per-day checklist item under a task (weekly view). */
 export interface Subtask {

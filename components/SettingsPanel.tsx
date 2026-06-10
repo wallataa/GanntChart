@@ -65,40 +65,64 @@ export default function SettingsPanel({
         </header>
 
         <div className="flex-1 space-y-6 overflow-y-auto p-4">
-          {/* Google account */}
+          {/* Account: sign-in state, board sync, and calendar access. */}
           <section>
             <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-neutral-500 dark:text-neutral-400">
-              Google Calendar
+              Account
             </h3>
             {status === "loading" ? (
               <p className="text-sm text-neutral-500 dark:text-neutral-400">Checking session…</p>
             ) : session ? (
               <div className="space-y-2">
                 <p className="text-sm text-neutral-700 dark:text-neutral-300">
-                  Signed in as{" "}
-                  <span className="font-medium">{session.user?.email}</span>
+                  Signed in as <span className="font-medium">{session.user?.email}</span>
+                  {!session.accessToken && (
+                    <span className="text-neutral-400 dark:text-neutral-500"> (email account)</span>
+                  )}
                 </p>
-                <button
-                  type="button"
-                  onClick={() => signOut()}
-                  className="rounded border border-neutral-300 px-3 py-1.5 text-sm hover:bg-neutral-50 dark:border-neutral-700 dark:hover:bg-neutral-800"
-                >
-                  Sign out
-                </button>
+                {!session.accessToken && (
+                  <>
+                    <p className="text-xs text-neutral-500 dark:text-neutral-400">
+                      Calendar features (Life lane, push to calendar) need Google.
+                      Switching signs you in with your Google account instead.
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => signIn("google")}
+                      className="rounded bg-blue-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-blue-700"
+                    >
+                      Switch to Google sign-in
+                    </button>
+                  </>
+                )}
+                <div>
+                  <button
+                    type="button"
+                    onClick={() => signOut()}
+                    className="rounded border border-neutral-300 px-3 py-1.5 text-sm hover:bg-neutral-50 dark:border-neutral-700 dark:hover:bg-neutral-800"
+                  >
+                    Sign out
+                  </button>
+                </div>
               </div>
             ) : (
-              <button
-                type="button"
-                onClick={() => signIn("google")}
-                className="rounded bg-blue-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-blue-700"
-              >
-                Connect Google Calendar
-              </button>
+              <div className="space-y-2">
+                <p className="text-xs text-neutral-500 dark:text-neutral-400">
+                  Sign in to sync your board across devices. Google sign-in also
+                  enables the calendar features.
+                </p>
+                <a
+                  href="/signin"
+                  className="inline-block rounded bg-blue-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-blue-700"
+                >
+                  Sign in / create account
+                </a>
+              </div>
             )}
           </section>
 
-          {/* Calendar sources */}
-          {session && (
+          {/* Calendar sources (Google sessions only) */}
+          {session?.accessToken && (
             <section>
               <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-neutral-500 dark:text-neutral-400">
                 Calendars in “Life” lane

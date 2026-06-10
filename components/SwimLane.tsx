@@ -93,11 +93,15 @@ export default function SwimLaneRow({
     return Math.max(0, Math.min(days.length - 1, i));
   };
 
+  // The scrollable grid surface, for edge auto-scroll during drags.
+  const getScroll = () => trackRef.current?.closest<HTMLElement>(".gantt-scroll");
+
   // Begin an edge-resize drag for an event (the non-dragged edge stays fixed).
   const beginResize = (event: Event, edge: ResizeEdge) => {
     startDrag(
       { clientX: 0, clientY: 0 },
       {
+        scrollContainer: getScroll,
         onMove: (e) => {
           const dateISO = toISODate(days[colFromX(e.clientX)]);
           if (edge === "end") {
@@ -121,6 +125,7 @@ export default function SwimLaneRow({
     const startCol = colFromX(e.clientX);
     setCreatePreview({ startCol, endCol: startCol });
     startDrag(e, {
+      scrollContainer: getScroll,
       onMove: (ev) => setCreatePreview({ startCol, endCol: colFromX(ev.clientX) }),
       onUp: () => {
         const p = createPreviewRef.current;
