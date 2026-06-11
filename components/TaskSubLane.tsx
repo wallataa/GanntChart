@@ -121,6 +121,10 @@ export default function TaskSubLane({
         "relative flex border-b border-neutral-100 dark:border-neutral-900",
         dragging ? "z-20 bg-white opacity-90 shadow dark:bg-neutral-950" : "",
       ].join(" ")}
+      // A dragged height sets the row's real height (like the main view's
+      // lanes) so enlarging visibly grows the row; taller content scrolls
+      // behind the maxHeight caps below.
+      style={{ height: effHeight }}
     >
       {/* Left: grip + title (fallback) + the accumulated subtask checklist */}
       <div

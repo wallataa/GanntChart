@@ -200,8 +200,11 @@ export default function WeeklyLane({
         </button>
       </div>
 
-      {/* Lane content: the task rows (or the Life band / empty placeholder). */}
-      <div className="sm:min-w-0 sm:flex-1">
+      {/* Lane content: the task rows (or the Life band / empty placeholder).
+          On ≥sm the last row grows to the lane's full height (the label column
+          can be taller than the rows), so the day grid always reaches the lane
+          boundary instead of leaving a dead band. */}
+      <div className="sm:flex sm:min-w-0 sm:flex-1 sm:flex-col sm:[&>:last-child]:grow">
       {/* Life lane: single stacked band of read-only GCal events (like main view) */}
       {life && lifePack ? (
         <div className="flex">

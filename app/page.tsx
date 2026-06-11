@@ -225,8 +225,12 @@ export default function Home() {
             }
           >
             <div className="flex h-full flex-col gap-2">
+            {/* In split view the panes size to their content (flex-auto: basis
+                = content height) and grow/shrink to exactly fill the viewport —
+                a short weekly pane no longer wastes half the screen while the
+                timeline scrolls. Single views keep the fill-everything flex-1. */}
             {effectiveView !== "weekly" && (
-              <div className="min-h-0 flex-1">
+              <div className={effectiveView === "split" ? "min-h-0 flex-auto" : "min-h-0 flex-1"}>
               <GanttGrid
                 lanes={ctrl.lanes}
                 events={allEvents}
@@ -243,7 +247,7 @@ export default function Home() {
               </div>
             )}
             {effectiveView !== "main" && (
-              <div className="min-h-0 flex-1">
+              <div className={effectiveView === "split" ? "min-h-0 flex-auto" : "min-h-0 flex-1"}>
               <WeeklyView
                 lanes={ctrl.lanes}
                 events={allEvents}
