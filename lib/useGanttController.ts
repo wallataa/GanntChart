@@ -15,7 +15,7 @@ import { DEFAULT_LANES, isLifeLane, loadLanes, pinLifeLast, saveLanes } from "./
 import { loadEvents, saveEvents } from "./events";
 import { loadSubtasks, saveSubtasks } from "./subtasks";
 import { newId } from "./id";
-import { shiftISODate } from "./dates";
+import { daysBetweenISO, shiftISODate } from "./dates";
 import { useHistory, type Doc } from "./useHistory";
 
 export interface GanttController {
@@ -197,6 +197,14 @@ export function useGanttController(): GanttController {
     persistEvents(manualEvents.map((e) => (e.id === id ? { ...e, start, end } : e)));
   };
 
+  // When a task is rescheduled (its start moves), its per-day subtasks travel
+  // with it by the same offset. Resizing doesn't shift them — the days a
+  // subtask sits on don't change when the span stretches.
+  const shiftTaskSubtasks = (subs: Subtask[], taskId: string, days: number): Subtask[] =>
+    days === 0
+      ? subs
+      : subs.map((s) => (s.taskId === taskId ? { ...s, date: shiftISODate(s.date, days) } : s));
+
   // Keyboard nudge: arrows shift the whole event ±1 day; Shift+arrows grow /
   // shrink it by moving the end date (never below the start).
   const nudgeEvent = (id: string, days: 1 | -1, resize: boolean) => {
@@ -207,20 +215,30 @@ export function useGanttController(): GanttController {
       if (end < ev.start) return;
       persistEvents(manualEvents.map((e) => (e.id === id ? { ...e, end } : e)));
     } else {
-      persistEvents(
-        manualEvents.map((e) =>
+      // One commit so the task and its subtasks undo together.
+      commit({
+        ...doc,
+        events: manualEvents.map((e) =>
           e.id === id
             ? { ...e, start: shiftISODate(e.start, days), end: shiftISODate(e.end, days) }
             : e,
         ),
-      );
+        subtasks: shiftTaskSubtasks(subtasks, id, days),
+      });
     }
   };
 
   const moveEvent = (id: string, laneId: string, startISO: string, endISO: string) => {
-    persistEvents(
-      manualEvents.map((e) => (e.id === id ? { ...e, laneId, start: startISO, end: endISO } : e)),
-    );
+    const moving = manualEvents.find((e) => e.id === id);
+    if (!moving) return;
+    // One commit so the task and its travelling subtasks undo together.
+    commit({
+      ...doc,
+      events: manualEvents.map((e) =>
+        e.id === id ? { ...e, laneId, start: startISO, end: endISO } : e,
+      ),
+      subtasks: shiftTaskSubtasks(subtasks, id, daysBetweenISO(moving.start, startISO)),
+    });
     setSelectedEventId(id);
   };
 
@@ -248,7 +266,12 @@ export function useGanttController(): GanttController {
       });
       idx = last === -1 ? rest.length : last + 1;
     }
-    persistEvents([...rest.slice(0, idx), updated, ...rest.slice(idx)]);
+    // One commit so the task and its travelling subtasks undo together.
+    commit({
+      ...doc,
+      events: [...rest.slice(0, idx), updated, ...rest.slice(idx)],
+      subtasks: shiftTaskSubtasks(subtasks, id, daysBetweenISO(moving.start, start)),
+    });
     setSelectedEventId(id);
     setSelectedLaneId(null);
   };

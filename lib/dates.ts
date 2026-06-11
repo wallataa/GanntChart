@@ -90,6 +90,13 @@ export function shiftISODate(iso: string, days: number): string {
   return d.toISOString().slice(0, 10);
 }
 
+/** Whole days from `fromISO` to `toISO` (positive when `toISO` is later). */
+export function daysBetweenISO(fromISO: string, toISO: string): number {
+  return Math.round(
+    (Date.parse(`${toISO}T00:00:00Z`) - Date.parse(`${fromISO}T00:00:00Z`)) / 86_400_000,
+  );
+}
+
 /** Human label for the visible window, e.g. "Jun 10 – Jul 22, 2026". */
 export function formatRangeLabel(range: DateRange): string {
   const sameYear = range.start.getFullYear() === range.end.getFullYear();
