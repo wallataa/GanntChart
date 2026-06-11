@@ -106,7 +106,15 @@ export default function EventBlock({
         />
       ) : (
         <>
-          <span className={["truncate", event.done ? "line-through" : ""].join(" ")}>
+          {/* Titles wrap at word boundaries and the block grows (the lane's
+              grid rows are minmax(…, auto)); break-words only splits a word
+              when it alone is wider than the block. */}
+          <span
+            className={[
+              "min-w-0 whitespace-normal break-words py-0.5",
+              event.done ? "line-through" : "",
+            ].join(" ")}
+          >
             {event.title}
           </span>
           {/* Status badges: note + synced-to-calendar. Tooltip has the detail. */}

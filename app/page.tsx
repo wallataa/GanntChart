@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, type CSSProperties } from "react";
+import { useEffect, useMemo, useState, type CSSProperties } from "react";
 import type { DateRange, ViewMode } from "@/types";
 import {
   defaultRange,
@@ -32,6 +32,13 @@ export default function Home() {
 
   // Persisted view settings (column widths, font scale, sidebar widths, …).
   const settings = useViewSettings();
+
+  // Re-derive the weekly window when its horizon settings change (including
+  // right after they hydrate from storage): keep the current anchor, apply the
+  // configured span and Monday alignment.
+  useEffect(() => {
+    setWeekRange((r) => weeklyRange(r.start, settings.weeklyWeeks, settings.weeklyFixedWeek));
+  }, [settings.weeklyWeeks, settings.weeklyFixedWeek]);
 
   // Phones: drop the notes column, cap the label column, and shrink the weekly
   // day columns so most of a week fits the screen without zooming. The user's
@@ -143,7 +150,8 @@ export default function Home() {
   };
 
   const goToday = () => {
-    if (effectiveView !== "main") setWeekRange(weeklyRange());
+    if (effectiveView !== "main")
+      setWeekRange(weeklyRange(new Date(), settings.weeklyWeeks, settings.weeklyFixedWeek));
     if (effectiveView !== "weekly") setRange(defaultRange());
     setSlide((s) => ({ key: s.key + 1, dir: "none" }));
   };
@@ -157,7 +165,8 @@ export default function Home() {
   const jumpToDate = (iso: string) => {
     const d = fromISODate(iso);
     if (Number.isNaN(d.getTime())) return;
-    if (effectiveView !== "main") setWeekRange(weeklyRange(d));
+    if (effectiveView !== "main")
+      setWeekRange(weeklyRange(d, settings.weeklyWeeks, settings.weeklyFixedWeek));
     if (effectiveView !== "weekly") setRange(defaultRange(d));
     setSlide((s) => ({ key: s.key + 1, dir: "none" }));
   };
@@ -290,6 +299,10 @@ export default function Home() {
         onReorderLanes={ctrl.reorderLanes}
         onAddLane={ctrl.addLane}
         onClearAll={ctrl.clearAll}
+        weeklyWeeks={settings.weeklyWeeks}
+        onWeeklyWeeksChange={settings.setWeeklyWeeks}
+        weeklyFixedWeek={settings.weeklyFixedWeek}
+        onWeeklyFixedWeekChange={settings.setWeeklyFixedWeek}
       />
 
       <NotesPanel

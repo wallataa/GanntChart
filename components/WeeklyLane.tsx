@@ -268,7 +268,7 @@ export default function WeeklyLane({
           <div
             className={`fs-10 sticky ${CELL_LEFT} ${CELL_W} z-10 shrink-0 bg-white py-0.5 pl-2 pr-2 text-neutral-300 dark:bg-neutral-950 dark:text-neutral-600`}
           >
-            no tasks this fortnight
+            no tasks in view
           </div>
           <div className="grid flex-1" style={{ gridTemplateColumns: columns }}>
             {days.map((d) => (

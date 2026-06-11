@@ -218,7 +218,7 @@ export default function TaskSubLane({
             >
               <span
                 className={[
-                  "fs-11 truncate font-medium text-neutral-900 dark:text-neutral-50",
+                  "fs-11 min-w-0 whitespace-normal break-words font-medium leading-tight text-neutral-900 dark:text-neutral-50",
                   task.done ? "line-through" : "",
                 ].join(" ")}
               >

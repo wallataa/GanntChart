@@ -171,10 +171,22 @@ export function placeEvent(
   return { colStart, span: colEnd - colStart + 1 };
 }
 
-/** Two-week (14-day) window starting at `anchor` (today by default). */
-export function weeklyRange(anchor: Date = new Date()): DateRange {
-  const start = toDateOnly(anchor);
-  return { start, end: toDateOnly(addDays(start, 13)) };
+/**
+ * The weekly view's window: `weeks` × 7 days containing `anchor`. By default
+ * it starts at the anchor day; with `startMonday` it snaps back to the
+ * anchor's Monday so the window is always whole Mon–Sun weeks.
+ */
+export function weeklyRange(
+  anchor: Date = new Date(),
+  weeks = 2,
+  startMonday = false,
+): DateRange {
+  let start = toDateOnly(anchor);
+  if (startMonday) {
+    const sinceMonday = (start.getDay() + 6) % 7; // Mon=0 … Sun=6
+    start = toDateOnly(addDays(start, -sinceMonday));
+  }
+  return { start, end: toDateOnly(addDays(start, weeks * 7 - 1)) };
 }
 
 /** True if an ISO date falls within the inclusive range. */

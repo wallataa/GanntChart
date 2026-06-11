@@ -21,6 +21,11 @@ interface SettingsPanelProps {
   onAddLane: () => void;
   /** Reset lanes to defaults and wipe all events + subtasks. */
   onClearAll: () => void;
+  /** Weekly view: window span in weeks (min 1) + Monday–Sunday alignment. */
+  weeklyWeeks: number;
+  onWeeklyWeeksChange: (weeks: number) => void;
+  weeklyFixedWeek: boolean;
+  onWeeklyFixedWeekChange: (fixed: boolean) => void;
 }
 
 /**
@@ -40,6 +45,10 @@ export default function SettingsPanel({
   onReorderLanes,
   onAddLane,
   onClearAll,
+  weeklyWeeks,
+  onWeeklyWeeksChange,
+  weeklyFixedWeek,
+  onWeeklyFixedWeekChange,
 }: SettingsPanelProps) {
   const { data: session, status } = useSession();
 
@@ -160,6 +169,47 @@ export default function SettingsPanel({
               )}
             </section>
           )}
+
+          {/* Weekly view window */}
+          <section>
+            <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-neutral-500 dark:text-neutral-400">
+              Weekly view
+            </h3>
+            <div className="space-y-3">
+              <label className="flex items-center justify-between gap-2 text-sm text-neutral-700 dark:text-neutral-300">
+                Time horizon
+                <span className="flex items-center gap-1.5">
+                  <input
+                    type="number"
+                    min={1}
+                    max={12}
+                    value={weeklyWeeks}
+                    onChange={(e) => {
+                      const v = Number(e.target.value);
+                      if (Number.isFinite(v) && v >= 1) onWeeklyWeeksChange(v);
+                    }}
+                    className="w-16 rounded border border-neutral-300 bg-transparent px-2 py-1 text-sm outline-none focus:border-blue-400 dark:border-neutral-700"
+                  />
+                  <span className="text-xs text-neutral-500 dark:text-neutral-400">
+                    {weeklyWeeks === 1 ? "week" : "weeks"}
+                  </span>
+                </span>
+              </label>
+              <label className="flex cursor-pointer items-center gap-2 text-sm text-neutral-700 dark:text-neutral-300">
+                <input
+                  type="checkbox"
+                  checked={weeklyFixedWeek}
+                  onChange={(e) => onWeeklyFixedWeekChange(e.target.checked)}
+                  className="h-4 w-4 cursor-pointer"
+                />
+                Fixed weeks (Monday – Sunday)
+              </label>
+              <p className="text-xs text-neutral-400 dark:text-neutral-500">
+                Fixed weeks snap the window to whole Monday-to-Sunday weeks;
+                otherwise it starts on the day you navigate to.
+              </p>
+            </div>
+          </section>
 
           {/* Swim-lane management */}
           <section>

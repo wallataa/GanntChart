@@ -17,6 +17,7 @@ const clampColWidth = clamp(28, 120);
 const clampNotesWidth = clamp(120, 400);
 const clampLabelWidth = clamp(60, 280);
 const clampFontScale = (v: number) => Math.max(0.8, Math.min(1.8, Math.round(v * 10) / 10));
+const clampWeeklyWeeks = (v: number) => clamp(1, 12)(Number.isFinite(v) ? v : 2);
 
 export interface ViewSettings {
   /** Day-column width for the main view (drag a column edge in its header). */
@@ -38,6 +39,12 @@ export interface ViewSettings {
   /** Filter completed events out of both views. */
   hideDone: boolean;
   setHideDone: (hide: boolean) => void;
+  /** Weekly view: how many weeks the window spans (min 1). */
+  weeklyWeeks: number;
+  setWeeklyWeeks: (weeks: number) => void;
+  /** Weekly view: snap the window to whole Monday–Sunday weeks. */
+  weeklyFixedWeek: boolean;
+  setWeeklyFixedWeek: (fixed: boolean) => void;
   /** Color theme. Applied as a `dark` class on <html> (Tailwind class mode). */
   theme: Theme;
   setTheme: (theme: Theme) => void;
@@ -71,6 +78,12 @@ export function useViewSettings(): ViewSettings {
   );
   const [hideEmptyLanes, setHideEmptyLanes] = usePersistedState("gantt:hideEmptyWeekly", false);
   const [hideDone, setHideDone] = usePersistedState("gantt:hideDone", false);
+  const [weeklyWeeks, setWeeklyWeeks] = usePersistedState(
+    "gantt:weeklyWeeks",
+    2,
+    clampWeeklyWeeks,
+  );
+  const [weeklyFixedWeek, setWeeklyFixedWeek] = usePersistedState("gantt:weeklyMonday", false);
   const [theme, setTheme] = usePersistedState<Theme>("gantt:theme", "light", (t) =>
     t === "dark" ? "dark" : "light",
   );
@@ -99,6 +112,10 @@ export function useViewSettings(): ViewSettings {
     setHideEmptyLanes,
     hideDone,
     setHideDone,
+    weeklyWeeks,
+    setWeeklyWeeks,
+    weeklyFixedWeek,
+    setWeeklyFixedWeek,
     theme,
     setTheme,
   };
