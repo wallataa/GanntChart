@@ -236,7 +236,7 @@ export default function SwimLaneRow({
               onCommitEdit={(title) => interaction.onCommitEdit(p.event.id, title)}
               onCancelEdit={interaction.onCancelEdit}
               onOpenNote={() => interaction.onOpenNote(p.event.id)}
-              wrapTitle={!effHeight}
+              rowCapPx={effHeight ? Math.max(18, Math.floor((effHeight - 2) / trackCount)) : undefined}
               onResizeStart={(edge) => beginResize(p.event, edge)}
               onPointerDownBody={(e) => onEventPointerDown(p.event, e)}
             />

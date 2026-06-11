@@ -1,6 +1,6 @@
 "use client";
 
-import type { PointerEvent as ReactPointerEvent } from "react";
+import { useLayoutEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
 import type { Event, ResizeEdge, SwimLane } from "@/types";
 import { fillFor, textOn } from "@/lib/colors";
 import { fromISODate } from "@/lib/dates";
@@ -29,10 +29,11 @@ interface EventBlockProps {
   /** Pointer-down on the body begins a move-drag (or, if no movement, a select). */
   onPointerDownBody: (e: ReactPointerEvent) => void;
   /**
-   * Wrap long titles onto multiple lines (auto-height lanes). False in
-   * fixed-height lanes, where blocks collapse to a single truncated line.
+   * Per-track row height budget (px) when the lane has a fixed height.
+   * Titles wrap to as many full lines as fit this budget (min 1, with an
+   * ellipsis beyond). Undefined = auto-height lane, wrap freely.
    */
-  wrapTitle: boolean;
+  rowCapPx?: number;
 }
 
 /**
@@ -55,8 +56,21 @@ export default function EventBlock({
   onOpenNote,
   onResizeStart,
   onPointerDownBody,
-  wrapTitle,
+  rowCapPx,
 }: EventBlockProps) {
+  // Fixed-height lanes: fit as many full lines as the per-track budget allows
+  // (measured against the real line height, which scales with the font size).
+  const titleRef = useRef<HTMLSpanElement>(null);
+  const [maxLines, setMaxLines] = useState<number | null>(null);
+  useLayoutEffect(() => {
+    if (rowCapPx == null || !titleRef.current) {
+      setMaxLines(null);
+      return;
+    }
+    const lineHeight = parseFloat(getComputedStyle(titleRef.current).lineHeight) || 13;
+    // ~10px of box margins/border/padding around the text.
+    setMaxLines(Math.max(1, Math.floor((rowCapPx - 10) / lineHeight)));
+  }, [rowCapPx]);
   // GCal events carry their real Google color (may be dark → adjust the text).
   const fill = event.gcalColor ?? fillFor(event.color ?? lane.color);
   const textColor = event.gcalColor ? textOn(fill) : undefined;
@@ -118,14 +132,25 @@ export default function EventBlock({
         />
       ) : (
         <>
-          {/* In auto-height lanes, titles wrap at word boundaries and the box
-              grows (break-words only splits a word wider than the box). In
-              fixed-height lanes they collapse to one truncated line. */}
+          {/* Titles wrap at word boundaries and the box grows (break-words
+              only splits a word wider than the box). Fixed-height lanes clamp
+              to the lines that fit their row budget, ellipsizing beyond. */}
           <span
+            ref={titleRef}
             className={[
-              wrapTitle ? "min-w-0 whitespace-normal break-words py-0.5" : "truncate",
+              "min-w-0 whitespace-normal break-words py-0.5",
               event.done ? "line-through" : "",
             ].join(" ")}
+            style={
+              maxLines != null
+                ? {
+                    display: "-webkit-box",
+                    WebkitBoxOrient: "vertical",
+                    WebkitLineClamp: maxLines,
+                    overflow: "hidden",
+                  }
+                : undefined
+            }
           >
             {event.title}
           </span>
