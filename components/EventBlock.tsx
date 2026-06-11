@@ -28,6 +28,11 @@ interface EventBlockProps {
   onResizeStart: (edge: ResizeEdge) => void;
   /** Pointer-down on the body begins a move-drag (or, if no movement, a select). */
   onPointerDownBody: (e: ReactPointerEvent) => void;
+  /**
+   * Wrap long titles onto multiple lines (auto-height lanes). False in
+   * fixed-height lanes, where blocks collapse to a single truncated line.
+   */
+  wrapTitle: boolean;
 }
 
 /**
@@ -50,6 +55,7 @@ export default function EventBlock({
   onOpenNote,
   onResizeStart,
   onPointerDownBody,
+  wrapTitle,
 }: EventBlockProps) {
   // GCal events carry their real Google color (may be dark → adjust the text).
   const fill = event.gcalColor ?? fillFor(event.color ?? lane.color);
@@ -70,9 +76,17 @@ export default function EventBlock({
     .join("\n");
 
   return (
+    // Transparent grid-cell wrapper: the colored box inside hugs its own
+    // content and centers vertically, so one wrapped (tall) block in a grid
+    // row doesn't stretch its neighbors into looking multiline. Clicks on the
+    // empty area around a short box fall through to the track.
+    <div
+      className="pointer-events-none flex items-center"
+      style={{ gridColumn: `${colStart} / span ${span}`, gridRow: track }}
+    >
     <div
       className={[
-        "group fs-10 pointer-events-auto relative m-[2px] flex items-center overflow-hidden rounded border px-1 leading-tight text-neutral-800 select-none",
+        "group fs-10 pointer-events-auto relative m-[2px] flex min-h-[22px] w-full items-center overflow-hidden rounded border px-1 leading-tight text-neutral-800 select-none",
         selected ? "border-blue-500 shadow-sm ring-2 ring-blue-400" : "border-black/15",
         dragging ? "opacity-80 shadow-lg" : "",
         event.done && !dragging ? "opacity-50 saturate-50" : "",
@@ -81,8 +95,6 @@ export default function EventBlock({
           : "",
       ].join(" ")}
       style={{
-        gridColumn: `${colStart} / span ${span}`,
-        gridRow: track,
         backgroundColor: fill,
         color: textColor,
       }}
@@ -106,12 +118,12 @@ export default function EventBlock({
         />
       ) : (
         <>
-          {/* Titles wrap at word boundaries and the block grows (the lane's
-              grid rows are minmax(…, auto)); break-words only splits a word
-              when it alone is wider than the block. */}
+          {/* In auto-height lanes, titles wrap at word boundaries and the box
+              grows (break-words only splits a word wider than the box). In
+              fixed-height lanes they collapse to one truncated line. */}
           <span
             className={[
-              "min-w-0 whitespace-normal break-words py-0.5",
+              wrapTitle ? "min-w-0 whitespace-normal break-words py-0.5" : "truncate",
               event.done ? "line-through" : "",
             ].join(" ")}
           >
@@ -167,6 +179,7 @@ export default function EventBlock({
           />
         </>
       )}
+    </div>
     </div>
   );
 }

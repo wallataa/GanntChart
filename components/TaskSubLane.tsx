@@ -218,7 +218,12 @@ export default function TaskSubLane({
             >
               <span
                 className={[
-                  "fs-11 min-w-0 whitespace-normal break-words font-medium leading-tight text-neutral-900 dark:text-neutral-50",
+                  // Wrap in auto-height rows; one truncated line when the row
+                  // has a fixed (dragged) height.
+                  effHeight
+                    ? "truncate"
+                    : "min-w-0 whitespace-normal break-words leading-tight",
+                  "fs-11 font-medium text-neutral-900 dark:text-neutral-50",
                   task.done ? "line-through" : "",
                 ].join(" ")}
               >
