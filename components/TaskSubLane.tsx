@@ -30,8 +30,14 @@ interface TaskSubLaneProps {
   dragging: boolean;
 }
 
-/** Combined left-column width (notes + label), driven by the `--sb-w` CSS var. */
-const SIDEBAR_WIDTH = "var(--sb-w, 316px)";
+/**
+ * The task row's left cell. On ≥sm the lane label has its own column (like the
+ * main view), so the cell takes the remaining sidebar width and sticks after
+ * it; on phones the label is a band and the cell gets the full sidebar width.
+ * Keep in sync with WeeklyLane's CELL_W / CELL_LEFT.
+ */
+const CELL_CLASSES =
+  "left-0 w-[var(--sb-w,316px)] sm:left-[var(--sb-label,120px)] sm:w-[calc(var(--sb-w,316px)_-_var(--sb-label,120px))]";
 
 /**
  * One task row. The task's date span is drawn as a colored bar (with the title
@@ -118,8 +124,8 @@ export default function TaskSubLane({
     >
       {/* Left: grip + title (fallback) + the accumulated subtask checklist */}
       <div
-        className="row-cap sticky left-0 z-10 flex shrink-0 flex-col gap-0.5 bg-white py-1 pl-1 pr-2 dark:bg-neutral-950"
-        style={{ width: SIDEBAR_WIDTH, maxHeight: effHeight }}
+        className={`row-cap sticky ${CELL_CLASSES} z-10 flex shrink-0 flex-col gap-0.5 bg-white py-1 pl-1 pr-2 dark:bg-neutral-950`}
+        style={{ maxHeight: effHeight }}
       >
         <div className="flex items-start gap-1">
           {manual ? (

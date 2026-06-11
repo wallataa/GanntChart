@@ -87,22 +87,31 @@ export default function DateHeader({
           className="sticky left-0 z-10 shrink-0 bg-white dark:bg-neutral-950"
           style={{ width: SIDEBAR_VAR }}
         >
-          {/* Drag the left columns' edges to resize them. */}
+          {/* Drag the left columns' edges to resize them. The label column is
+              leftmost (matching both views), so its edge sits at --sb-label;
+              the notes column ends at the sidebar's right edge. */}
           {onResizeSidebar && (
             <>
+              <div
+                onPointerDown={startSidebarResize("label")}
+                title="Drag to resize the label column"
+                className={[
+                  "absolute top-0 z-30 h-full w-[6px] cursor-col-resize touch-none hover:bg-blue-400/40 coarse:w-3",
+                  sidebarNotesWidth > 0 ? "" : "-right-[3px]",
+                ].join(" ")}
+                style={
+                  sidebarNotesWidth > 0
+                    ? { left: "calc(var(--sb-label, 120px) - 3px)" }
+                    : undefined
+                }
+              />
               {sidebarNotesWidth > 0 && (
                 <div
                   onPointerDown={startSidebarResize("notes")}
                   title="Drag to resize the notes column"
-                  className="absolute top-0 z-30 h-full w-[6px] cursor-col-resize touch-none hover:bg-blue-400/40 coarse:w-3"
-                  style={{ left: "calc(var(--sb-notes, 196px) - 3px)" }}
+                  className="absolute -right-[3px] top-0 z-30 h-full w-[6px] cursor-col-resize touch-none hover:bg-blue-400/40 coarse:w-3"
                 />
               )}
-              <div
-                onPointerDown={startSidebarResize("label")}
-                title="Drag to resize the label column"
-                className="absolute -right-[3px] top-0 z-30 h-full w-[6px] cursor-col-resize touch-none hover:bg-blue-400/40 coarse:w-3"
-              />
             </>
           )}
         </div>

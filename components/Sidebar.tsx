@@ -116,10 +116,73 @@ export default function Sidebar({
         </div>
       )}
 
-      {/* Column A — notes (collapsed entirely on small screens) */}
+      {/* Lane label — leftmost, matching the weekly view. Click selects the lane
+          (so the Fill swatches recolor it); double-click renames. */}
+      <div
+        className={[
+          "group/label relative flex shrink-0 items-center justify-center border-r px-1 text-center",
+          interaction.selectedLaneId === lane.id
+            ? "border-blue-500 ring-2 ring-inset ring-blue-400"
+            : "border-neutral-200 dark:border-neutral-700",
+        ].join(" ")}
+        style={{
+          width: "var(--sb-label, 120px)",
+          backgroundImage: `linear-gradient(${fillFor(lane.color)}55, ${fillFor(lane.color)}55)`,
+        }}
+      >
+        {/* Delete this lane (and its events). Hidden on the locked Life lane;
+            revealed on hover. Confirms when the lane still has events. */}
+        {!life && (
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              if (confirmDeleteLane(lane.label, tasks.length)) {
+                interaction.onDeleteLane(lane.id);
+              }
+            }}
+            title={`Delete ${lane.label}`}
+            aria-label={`Delete ${lane.label}`}
+            className="absolute right-0.5 top-0.5 z-10 rounded p-0.5 text-neutral-400 opacity-0 hover:bg-white/60 hover:text-red-600 focus:opacity-100 group-hover/label:opacity-100 dark:hover:bg-black/40 dark:hover:text-red-400"
+          >
+            <XIcon className="h-3 w-3" />
+          </button>
+        )}
+        {editingLabel ? (
+          <input
+            autoFocus
+            value={labelDraft}
+            onChange={(e) => setLabelDraft(e.target.value)}
+            onBlur={commitLabel}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") commitLabel();
+              else if (e.key === "Escape") {
+                setLabelDraft(lane.label);
+                setEditingLabel(false);
+              }
+            }}
+            className="fs-14 w-full rounded border border-blue-300 px-1 py-0.5 text-center outline-none dark:border-blue-700 dark:bg-neutral-900"
+          />
+        ) : (
+          <button
+            type="button"
+            onClick={() => interaction.onSelectLane(lane.id)}
+            onDoubleClick={() => setEditingLabel(true)}
+            title="Click to select (recolor); double-click to rename"
+            className={[
+              "fs-14 flex w-full items-center justify-center gap-1 rounded py-1 pl-3 font-medium hover:bg-black/5 dark:hover:bg-white/10",
+              life ? "text-teal-800 dark:text-teal-300" : "text-neutral-800 dark:text-neutral-100",
+            ].join(" ")}
+          >
+            {life && <CalendarIcon className="h-3.5 w-3.5 shrink-0" />}
+            {lane.label}
+          </button>
+        )}
+      </div>
+      {/* Notes column (collapsed entirely on small screens) */}
       {showNotes && (
       <div
-        className="fs-11 shrink-0 py-1.5 pl-5 pr-2 leading-snug text-neutral-700 dark:text-neutral-300"
+        className="fs-11 shrink-0 py-1.5 pl-2 pr-2 leading-snug text-neutral-700 dark:text-neutral-300"
         style={{ width: "var(--sb-notes, 196px)" }}
       >
         {editingNotes ? (
@@ -190,69 +253,6 @@ export default function Sidebar({
       </div>
       )}
 
-      {/* Column B — lane label. Click selects the lane (so the Fill swatches
-          recolor it); double-click renames. */}
-      <div
-        className={[
-          "group/label relative flex shrink-0 items-center justify-center border-l px-1 text-center",
-          interaction.selectedLaneId === lane.id
-            ? "border-blue-500 ring-2 ring-inset ring-blue-400"
-            : "border-neutral-200 dark:border-neutral-700",
-        ].join(" ")}
-        style={{
-          width: "var(--sb-label, 120px)",
-          backgroundImage: `linear-gradient(${fillFor(lane.color)}55, ${fillFor(lane.color)}55)`,
-        }}
-      >
-        {/* Delete this lane (and its events). Hidden on the locked Life lane;
-            revealed on hover. Confirms when the lane still has events. */}
-        {!life && (
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              if (confirmDeleteLane(lane.label, tasks.length)) {
-                interaction.onDeleteLane(lane.id);
-              }
-            }}
-            title={`Delete ${lane.label}`}
-            aria-label={`Delete ${lane.label}`}
-            className="absolute right-0.5 top-0.5 z-10 rounded p-0.5 text-neutral-400 opacity-0 hover:bg-white/60 hover:text-red-600 focus:opacity-100 group-hover/label:opacity-100 dark:hover:bg-black/40 dark:hover:text-red-400"
-          >
-            <XIcon className="h-3 w-3" />
-          </button>
-        )}
-        {editingLabel ? (
-          <input
-            autoFocus
-            value={labelDraft}
-            onChange={(e) => setLabelDraft(e.target.value)}
-            onBlur={commitLabel}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") commitLabel();
-              else if (e.key === "Escape") {
-                setLabelDraft(lane.label);
-                setEditingLabel(false);
-              }
-            }}
-            className="fs-14 w-full rounded border border-blue-300 px-1 py-0.5 text-center outline-none dark:border-blue-700 dark:bg-neutral-900"
-          />
-        ) : (
-          <button
-            type="button"
-            onClick={() => interaction.onSelectLane(lane.id)}
-            onDoubleClick={() => setEditingLabel(true)}
-            title="Click to select (recolor); double-click to rename"
-            className={[
-              "fs-14 flex w-full items-center justify-center gap-1 rounded py-1 font-medium hover:bg-black/5 dark:hover:bg-white/10",
-              life ? "text-teal-800 dark:text-teal-300" : "text-neutral-800 dark:text-neutral-100",
-            ].join(" ")}
-          >
-            {life && <CalendarIcon className="h-3.5 w-3.5 shrink-0" />}
-            {lane.label}
-          </button>
-        )}
-      </div>
     </div>
   );
 }

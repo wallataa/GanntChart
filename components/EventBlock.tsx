@@ -114,13 +114,14 @@ export default function EventBlock({
             <span className="ml-auto flex shrink-0 items-center gap-0.5 pl-1 text-neutral-700/70">
               {event.note && (
                 <span
-                  title="Double-click to edit the note"
+                  title="Open the note"
                   onPointerDown={(e) => e.stopPropagation()}
-                  onDoubleClick={(e) => {
+                  onClick={(e) => {
                     e.stopPropagation();
                     onOpenNote();
                   }}
-                  className="cursor-pointer"
+                  onDoubleClick={(e) => e.stopPropagation()}
+                  className="cursor-pointer p-0.5 coarse:p-1"
                 >
                   <NoteIcon className="h-2.5 w-2.5" />
                 </span>
