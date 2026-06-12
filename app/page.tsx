@@ -29,7 +29,13 @@ export default function Home() {
   // (assigned below once lifeOps exists) — so the Delete key, empty-title
   // deletes, etc. all work on calendar events too, without undo pollution.
   const deleteGcalRef = useRef<(id: string) => boolean>(() => false);
-  const ctrl = useGanttController({ deleteExternal: (id) => deleteGcalRef.current(id) });
+  // Ctrl+Z / the undo button first offer to restore a just-deleted calendar
+  // event (while its undo toast is visible), then fall through to doc undo.
+  const restoreGcalRef = useRef<() => boolean>(() => false);
+  const ctrl = useGanttController({
+    deleteExternal: (id) => deleteGcalRef.current(id),
+    undoExternal: () => restoreGcalRef.current(),
+  });
 
   // Active view + its date windows (main spans months, weekly spans 14 days).
   const [view, setView] = useState<ViewMode>("main");
@@ -75,6 +81,7 @@ export default function Home() {
   // rename / delete write through to Google; optimistic locally).
   const lifeOps = useLifeEvents({
     calendars: calendar.calendars,
+    events: calendar.events,
     applyLocal: calendar.applyLocal,
     refresh: calendar.refresh,
     reportError: calendar.reportError,
@@ -88,6 +95,7 @@ export default function Home() {
     lifeOps.remove(id);
     return true;
   };
+  restoreGcalRef.current = lifeOps.restore;
 
   // Auto-sync: once an event has been pushed to Google Calendar, later edits
   // (rename, move, resize, note, lane change) re-push automatically — no
@@ -392,6 +400,23 @@ export default function Home() {
         weeklyFixedWeek={settings.weeklyFixedWeek}
         onWeeklyFixedWeekChange={settings.setWeeklyFixedWeek}
       />
+
+      {/* Undo toast for calendar deletions (they live outside the document's
+          undo history; Google restores the same event in place). */}
+      {lifeOps.lastDeleted && (
+        <div className="fixed bottom-4 left-1/2 z-50 flex -translate-x-1/2 items-center gap-3 rounded-lg border border-neutral-200 bg-white px-4 py-2 text-sm shadow-xl dark:border-neutral-700 dark:bg-neutral-900">
+          <span className="max-w-[60vw] truncate text-neutral-700 dark:text-neutral-300">
+            Deleted “{lifeOps.lastDeleted.title}” from Google Calendar
+          </span>
+          <button
+            type="button"
+            onClick={lifeOps.restore}
+            className="font-medium text-blue-600 hover:underline dark:text-blue-400"
+          >
+            Undo (Ctrl+Z)
+          </button>
+        </div>
+      )}
 
       <NotesPanel
         key={notesTarget ? `${notesTarget.kind}:${notesTarget.id}` : "none"}

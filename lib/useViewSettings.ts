@@ -13,7 +13,7 @@ export type Theme = "light" | "dark";
 
 const clamp = (min: number, max: number) => (v: number) =>
   Math.max(min, Math.min(max, Math.round(v)));
-const clampColWidth = clamp(28, 120);
+const clampColWidth = clamp(28, 300);
 const clampNotesWidth = clamp(120, 400);
 const clampLabelWidth = clamp(60, 280);
 const clampFontScale = (v: number) => Math.max(0.8, Math.min(1.8, Math.round(v * 10) / 10));

@@ -78,22 +78,51 @@ export async function PATCH(req: NextRequest) {
     title?: string;
     start?: string;
     end?: string;
+    status?: string;
   };
-  const { calendarId, eventId, title, start, end } = body;
+  const { calendarId, eventId, title, start, end, status } = body;
   if (!calendarId || !eventId) {
     return NextResponse.json({ error: "Missing calendarId/eventId" }, { status: 400 });
   }
   if ((start && !ISO_DATE.test(start)) || (end && !ISO_DATE.test(end))) {
     return NextResponse.json({ error: "Invalid start/end" }, { status: 400 });
   }
+  if (status !== undefined && status !== "confirmed") {
+    return NextResponse.json({ error: "Invalid status" }, { status: 400 });
+  }
 
   const requestBody: calendar_v3.Schema$Event = {};
   if (title !== undefined) requestBody.summary = title;
-  if (start) requestBody.start = { date: start };
-  if (end) requestBody.end = { date: shiftISODate(end, 1) };
+  // "confirmed" restores a just-deleted (cancelled) event in place — this is
+  // what makes calendar deletion undoable.
+  if (status) requestBody.status = status;
 
   try {
-    await client(session).events.patch({ calendarId, eventId, requestBody });
+    const cal = client(session);
+    if (start || end) {
+      // Date changes must respect the event's kind: patching `date` onto a
+      // TIMED event merges into {date + dateTime} and Google rejects it (the
+      // grid edit then looked like it "reverted"). Read the event and either
+      // move the all-day dates, or keep a timed event's clock time/zone and
+      // move only its calendar date.
+      const existing = (await cal.events.get({ calendarId, eventId })).data;
+      if (existing.start?.date) {
+        if (start) requestBody.start = { date: start };
+        if (end) requestBody.end = { date: shiftISODate(end, 1) };
+      } else {
+        const onDate = (
+          orig: calendar_v3.Schema$EventDateTime | undefined,
+          newDate: string,
+        ): calendar_v3.Schema$EventDateTime => ({
+          // RFC3339 "2026-06-14T19:00:00+01:00" → keep "T19:00:00+01:00".
+          dateTime: `${newDate}${(orig?.dateTime ?? "T00:00:00Z").slice(10)}`,
+          timeZone: orig?.timeZone ?? undefined,
+        });
+        if (start) requestBody.start = onDate(existing.start ?? undefined, start);
+        if (end) requestBody.end = onDate(existing.end ?? undefined, end);
+      }
+    }
+    await cal.events.patch({ calendarId, eventId, requestBody });
     return NextResponse.json({ ok: true });
   } catch (err) {
     return fail(err, "Event update failed");

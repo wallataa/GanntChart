@@ -82,7 +82,8 @@ export default function EventBlock({
   const duration = differenceInCalendarDays(fromISODate(event.end), fromISODate(event.start)) + 1;
   const range =
     event.start === event.end ? startLabel : `${startLabel} – ${endLabel} · ${duration}d`;
-  const editable = event.source === "manual" || gcalEditable;
+  const editable =
+    event.source === "manual" || (gcalEditable && !event.gcalReadOnly);
   const tooltip = [
     `${event.title} (${range})`,
     event.done ? "✓ done" : null,
@@ -94,11 +95,12 @@ export default function EventBlock({
 
   return (
     // Transparent grid-cell wrapper: the colored box inside hugs its own
-    // content and centers vertically, so one wrapped (tall) block in a grid
-    // row doesn't stretch its neighbors into looking multiline. Clicks on the
-    // empty area around a short box fall through to the track.
+    // content and aligns to the row's top, so one wrapped (tall) block in a
+    // grid row doesn't stretch its neighbors — and short neighbors line up
+    // with its top edge instead of floating mid-row. Clicks on the empty
+    // area below a short box fall through to the track.
     <div
-      className="pointer-events-none flex items-center"
+      className="pointer-events-none flex items-start"
       style={{ gridColumn: `${colStart} / span ${span}`, gridRow: track }}
     >
     <div

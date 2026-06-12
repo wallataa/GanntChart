@@ -35,6 +35,11 @@ export interface Event {
    */
   gcalColor?: string;
   /**
+   * True for GCal events from calendars the user can't write to (birthdays,
+   * holidays, subscriptions) — they stay read-only even when signed in.
+   */
+  gcalReadOnly?: boolean;
+  /**
    * Optional fixed height in px for this task's row in the weekly view (set by
    * dragging its bottom edge); taller content scrolls. Undefined = auto.
    */

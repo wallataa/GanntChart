@@ -63,6 +63,14 @@ export async function GET(req: NextRequest) {
     const sourceIds = calendars.filter((c) => c.enabled).map((c) => c.id);
     // Calendar id -> its display color, the fallback when an event has none.
     const calendarColors = new Map(calendars.map((c) => [c.id, c.backgroundColor]));
+    // Calendar id -> whether the user can write to it (birthdays / holidays /
+    // subscriptions are read-only; their events shouldn't invite edits).
+    const calendarWritable = new Map(
+      (listRes.data.items ?? []).map((c) => [
+        c.id ?? "",
+        c.accessRole === "owner" || c.accessRole === "writer",
+      ]),
+    );
 
     // 2. Fetch events from each enabled calendar in parallel.
     const perCalendar = await Promise.all(
@@ -76,7 +84,13 @@ export async function GET(req: NextRequest) {
           maxResults: 2500,
         });
         return (res.data.items ?? []).map((item) =>
-          mapGcalEvent(item, calId, eventPalette, calendarColors.get(calId)),
+          mapGcalEvent(
+            item,
+            calId,
+            eventPalette,
+            calendarColors.get(calId),
+            calendarWritable.get(calId) !== true,
+          ),
         );
       }),
     );
@@ -103,6 +117,7 @@ function mapGcalEvent(
   calId: string,
   eventPalette: Record<string, { background?: string | null }>,
   calendarColor: string | undefined,
+  readOnly: boolean,
 ): Event | null {
   if (!item.id || (!item.start?.date && !item.start?.dateTime)) return null;
 
@@ -130,6 +145,7 @@ function mapGcalEvent(
     source: "gcal",
     gcalId: item.id,
     gcalColor,
+    gcalReadOnly: readOnly || undefined,
   };
 }
 

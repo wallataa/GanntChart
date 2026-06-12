@@ -98,18 +98,31 @@ export function useGanttController(options?: {
    * Covers every deletion path, including the Delete/Backspace key.
    */
   deleteExternal?: (id: string) => boolean;
+  /**
+   * Undo delegate for actions outside the document (e.g. restoring a
+   * just-deleted Google Calendar event). Checked before the document's own
+   * undo by both Ctrl+Z and the toolbar button; return true when handled.
+   */
+  undoExternal?: () => boolean;
 }): GanttController {
   const deleteExternal = options?.deleteExternal;
+  const undoExternal = options?.undoExternal;
   const persistDoc = useCallback((d: Doc) => {
     saveLanes(d.lanes);
     saveEvents(d.events);
     saveSubtasks(d.subtasks);
   }, []);
-  const { doc, commit, reset, undo, redo, canUndo, canRedo } = useHistory(
+  const { doc, commit, reset, undo: undoDoc, redo, canUndo, canRedo } = useHistory(
     { lanes: [], events: [], subtasks: [] },
     persistDoc,
   );
   const { lanes, events: manualEvents, subtasks } = doc;
+
+  // External actions (calendar restores) take precedence over document undo.
+  const undo = () => {
+    if (undoExternal?.()) return;
+    undoDoc();
+  };
 
   // Direct-manipulation state (spreadsheet-style editing).
   const [activeColor, setActiveColor] = useState<ColorName>("sky");
