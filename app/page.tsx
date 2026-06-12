@@ -25,7 +25,11 @@ import NotesPanel from "@/components/NotesPanel";
 
 export default function Home() {
   // The undoable data document + all selection/editing state and handlers.
-  const ctrl = useGanttController();
+  // Life-lane (GCal) deletions route to the calendar mutations via this ref
+  // (assigned below once lifeOps exists) — so the Delete key, empty-title
+  // deletes, etc. all work on calendar events too, without undo pollution.
+  const deleteGcalRef = useRef<(id: string) => boolean>(() => false);
+  const ctrl = useGanttController({ deleteExternal: (id) => deleteGcalRef.current(id) });
 
   // Active view + its date windows (main spans months, weekly spans 14 days).
   const [view, setView] = useState<ViewMode>("main");
@@ -79,6 +83,11 @@ export default function Home() {
       ctrl.interaction.onStartEdit(id);
     },
   });
+  deleteGcalRef.current = (id) => {
+    if (!id.startsWith("gcal:")) return false;
+    lifeOps.remove(id);
+    return true;
+  };
 
   // Auto-sync: once an event has been pushed to Google Calendar, later edits
   // (rename, move, resize, note, lane change) re-push automatically — no
@@ -192,10 +201,8 @@ export default function Home() {
         if (isGcal(id)) lifeOps.reschedule(id, startISO, endISO);
         else ctrl.interaction.onMoveEvent(id, laneId, startISO, endISO);
       },
-      onDelete: (id: string) => {
-        if (isGcal(id)) lifeOps.remove(id);
-        else ctrl.interaction.onDelete(id);
-      },
+      // onDelete needs no wrapper: the controller routes GCal ids through the
+      // deleteExternal delegate (covering the Delete key path too).
     };
   }, [ctrl.interaction, lifeOps]);
 

@@ -90,7 +90,16 @@ const orderRange = (a: string, b: string): [string, string] => (a <= b ? [a, b] 
  * Single-slice mutations record one history step each; multi-slice changes
  * (e.g. deleting a lane + its events) commit once so they undo as one action.
  */
-export function useGanttController(): GanttController {
+export function useGanttController(options?: {
+  /**
+   * Deletion delegate for events that live outside the document (e.g. the
+   * Life lane's Google Calendar events). Return true when handled — the
+   * controller then only clears selection, leaving the undo history alone.
+   * Covers every deletion path, including the Delete/Backspace key.
+   */
+  deleteExternal?: (id: string) => boolean;
+}): GanttController {
+  const deleteExternal = options?.deleteExternal;
   const persistDoc = useCallback((d: Doc) => {
     saveLanes(d.lanes);
     saveEvents(d.events);
@@ -187,6 +196,11 @@ export function useGanttController(): GanttController {
   };
 
   const deleteEvent = (id: string) => {
+    if (deleteExternal?.(id)) {
+      setSelectedEventId((cur) => (cur === id ? null : cur));
+      setEditingEventId(null);
+      return;
+    }
     persistEvents(manualEvents.filter((e) => e.id !== id));
     setSelectedEventId((cur) => (cur === id ? null : cur));
     setEditingEventId(null);
