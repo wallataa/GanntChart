@@ -24,6 +24,8 @@ interface GanttGridProps {
   /** Subtasks, for the accumulated per-task to-do list in the sidebar. */
   subtasks: Subtask[];
   onToggleSubtask: (subtaskId: string) => void;
+  /** Allow creating/editing the Life lane's Google Calendar events. */
+  lifeEditable: boolean;
 }
 
 interface MovePreview {
@@ -52,6 +54,7 @@ export default function GanttGrid({
   onResizeSidebar,
   subtasks,
   onToggleSubtask,
+  lifeEditable,
 }: GanttGridProps) {
   const total = columnCount(range);
 
@@ -68,7 +71,9 @@ export default function GanttGrid({
 
   const handleEventPointerDown = (event: Event, e: ReactPointerEvent) => {
     if (e.button !== 0) return;
-    const origin = laneAtY(e.clientY);
+    // GCal events stay in the Life lane — their drag changes dates only.
+    const lockLane = event.source === "gcal";
+    const origin = laneAtY(e.clientY, lockLane);
     if (!origin) return;
 
     const originRect = origin.rect;
@@ -81,8 +86,8 @@ export default function GanttGrid({
       threshold: DRAG_THRESHOLD,
       scrollContainer: getScroll,
       onMove: (ev) => {
-        const hit = laneAtY(ev.clientY);
-        const laneId = hit?.lane.id ?? event.laneId;
+        const hit = lockLane ? null : laneAtY(ev.clientY);
+        const laneId = lockLane ? event.laneId : hit?.lane.id ?? event.laneId;
         const left = hit?.rect.left ?? originRect.left;
         const rawCol = Math.floor((ev.clientX - left) / columnWidth) - grabOffset;
         const startColNew = Math.max(0, Math.min(total - 1, rawCol));
@@ -137,6 +142,7 @@ export default function GanttGrid({
             subtasks={subtasks}
             onToggleSubtask={onToggleSubtask}
             showNotes={sidebarNotesWidth > 0}
+            lifeEditable={lifeEditable}
             registerTrack={registerLane}
             onEventPointerDown={handleEventPointerDown}
             draggingId={movePreview?.eventId ?? null}

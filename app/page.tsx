@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useState, type CSSProperties } from "react";
-import type { DateRange, ViewMode } from "@/types";
+import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
+import type { DateRange, Event, ViewMode } from "@/types";
 import {
   defaultRange,
   formatRangeLabel,
@@ -12,6 +12,8 @@ import {
 import { useGanttController } from "@/lib/useGanttController";
 import { useCalendarSync } from "@/lib/useCalendarSync";
 import { useCalendarPush } from "@/lib/useCalendarPush";
+import { useLifeEvents } from "@/lib/useLifeEvents";
+import { LIFE_LANE_ID } from "@/lib/lanes";
 import { useBoardSync } from "@/lib/useBoardSync";
 import { useIsMobile } from "@/lib/useIsMobile";
 import { useViewSettings } from "@/lib/useViewSettings";
@@ -65,6 +67,58 @@ export default function Home() {
   // Push selected events into the dedicated "Gantt Chart" Google Calendar.
   const push = useCalendarPush(ctrl.markPushed);
 
+  // Editing for the Life lane's Google Calendar events (create / reschedule /
+  // rename / delete write through to Google; optimistic locally).
+  const lifeOps = useLifeEvents({
+    calendars: calendar.calendars,
+    applyLocal: calendar.applyLocal,
+    refresh: calendar.refresh,
+    reportError: calendar.reportError,
+    onCreated: (id) => {
+      ctrl.interaction.onSelect(id);
+      ctrl.interaction.onStartEdit(id);
+    },
+  });
+
+  // Auto-sync: once an event has been pushed to Google Calendar, later edits
+  // (rename, move, resize, note, lane change) re-push automatically — no
+  // "Update" click needed. The first push stays manual (you choose what goes
+  // to the calendar). Pushes are debounced 2s so a burst of edits (e.g.
+  // holding an arrow key to nudge) collapses into one API call, and run one
+  // at a time — the effect re-fires when the in-flight one finishes.
+  const pushedSigRef = useRef<Map<string, string>>(new Map());
+  const pushRef = useRef(push);
+  pushRef.current = push;
+  useEffect(() => {
+    if (!calendar.signedIn || push.pushingId) return;
+    let changed: { ev: Event; laneLabel: string; sig: string } | null = null;
+    for (const ev of ctrl.manualEvents) {
+      if (!ev.pushed) {
+        pushedSigRef.current.delete(ev.id);
+        continue;
+      }
+      const laneLabel = ctrl.lanes.find((l) => l.id === ev.laneId)?.label ?? "";
+      const sig = [ev.title, ev.start, ev.end, ev.note ?? "", laneLabel].join(" ");
+      const prev = pushedSigRef.current.get(ev.id);
+      if (prev === undefined) {
+        // First sighting (load / fresh push): baseline, don't re-push.
+        pushedSigRef.current.set(ev.id, sig);
+      } else if (prev !== sig && !changed) {
+        changed = { ev, laneLabel, sig };
+      }
+    }
+    if (!changed) return;
+    // The signature updates only when the push actually fires, so every
+    // further edit re-runs this effect, resets the timer, and the eventual
+    // push carries the latest version of the event.
+    const target = changed;
+    const timer = setTimeout(() => {
+      pushedSigRef.current.set(target.ev.id, target.sig);
+      pushRef.current.pushEvent(target.ev, target.laneLabel);
+    }, 2000);
+    return () => clearTimeout(timer);
+  }, [ctrl.manualEvents, ctrl.lanes, calendar.signedIn, push.pushingId]);
+
   // Account board sync: while signed in, the document mirrors to Drive / KV.
   const boardDoc = useMemo(
     () => ({ lanes: ctrl.lanes, events: ctrl.manualEvents, subtasks: ctrl.subtasks }),
@@ -105,19 +159,45 @@ export default function Home() {
     else ctrl.setNote(notesTarget.id, value);
   };
 
-  // Grid interaction with the Notes panel layered on: double-clicking an
-  // event's note badge selects it and opens its note here (the panel state
-  // lives in this component, not the controller).
-  const gridInteraction = useMemo(
-    () => ({
+  // Grid interaction with two layers on top of the controller:
+  //  - the Notes panel (page state) opens from an event's note badge;
+  //  - Life-lane GCal events (ids "gcal:…") route to the calendar mutations
+  //    instead of the manual-event document.
+  const gridInteraction = useMemo(() => {
+    const isGcal = (id: string) => id.startsWith("gcal:");
+    return {
       ...ctrl.interaction,
       onOpenNote: (id: string) => {
         ctrl.interaction.onOpenNote(id);
         setNotesTarget({ kind: "event", id });
       },
-    }),
-    [ctrl.interaction],
-  );
+      onCreateEvent: (laneId: string, startISO: string, endISO: string) => {
+        if (laneId === LIFE_LANE_ID) lifeOps.create(startISO, endISO);
+        else ctrl.interaction.onCreateEvent(laneId, startISO, endISO);
+      },
+      onCommitEdit: (id: string, title: string) => {
+        if (isGcal(id)) {
+          ctrl.interaction.onCancelEdit(); // close the editor without touching the doc
+          lifeOps.rename(id, title);
+        } else {
+          ctrl.interaction.onCommitEdit(id, title);
+        }
+      },
+      onResize: (id: string, startISO: string, endISO: string) => {
+        if (isGcal(id)) lifeOps.reschedule(id, startISO, endISO);
+        else ctrl.interaction.onResize(id, startISO, endISO);
+      },
+      onMoveEvent: (id: string, laneId: string, startISO: string, endISO: string) => {
+        // GCal events stay in the Life lane — only their dates change.
+        if (isGcal(id)) lifeOps.reschedule(id, startISO, endISO);
+        else ctrl.interaction.onMoveEvent(id, laneId, startISO, endISO);
+      },
+      onDelete: (id: string) => {
+        if (isGcal(id)) lifeOps.remove(id);
+        else ctrl.interaction.onDelete(id);
+      },
+    };
+  }, [ctrl.interaction, lifeOps]);
 
   // Slide-animation state for date navigation. `key` forces a remount to replay
   // the CSS animation; `dir` picks the direction.
@@ -252,6 +332,7 @@ export default function Home() {
                 onResizeSidebar={settings.setSidebarWidth}
                 subtasks={ctrl.subtasks}
                 onToggleSubtask={ctrl.weeklyInteraction.onToggle}
+                lifeEditable={calendar.signedIn}
               />
               </div>
             )}

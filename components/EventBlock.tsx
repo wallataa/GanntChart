@@ -34,6 +34,8 @@ interface EventBlockProps {
    * ellipsis beyond). Undefined = auto-height lane, wrap freely.
    */
   rowCapPx?: number;
+  /** Allow editing Google Calendar events (signed in with write access). */
+  gcalEditable?: boolean;
 }
 
 /**
@@ -57,6 +59,7 @@ export default function EventBlock({
   onResizeStart,
   onPointerDownBody,
   rowCapPx,
+  gcalEditable = false,
 }: EventBlockProps) {
   // Fixed-height lanes: fit as many full lines as the per-track budget allows
   // (measured against the real line height, which scales with the font size).
@@ -79,7 +82,7 @@ export default function EventBlock({
   const duration = differenceInCalendarDays(fromISODate(event.end), fromISODate(event.start)) + 1;
   const range =
     event.start === event.end ? startLabel : `${startLabel} – ${endLabel} · ${duration}d`;
-  const editable = event.source === "manual";
+  const editable = event.source === "manual" || gcalEditable;
   const tooltip = [
     `${event.title} (${range})`,
     event.done ? "✓ done" : null,

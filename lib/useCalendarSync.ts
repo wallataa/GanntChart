@@ -1,9 +1,12 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useSession } from "next-auth/react";
 import type { CalendarApiResponse, CalendarSource, DateRange, Event } from "@/types";
 import { toISODate } from "./dates";
+
+/** Background refresh cadence for the Life lane. */
+const REFRESH_MS = 5 * 60_000;
 
 export interface CalendarSync {
   /** GCal events for the Life lane (empty when signed out). */
@@ -16,6 +19,12 @@ export interface CalendarSync {
   signedIn: boolean;
   syncing: boolean;
   error: string | null;
+  /** Optimistically transform the local GCal events (after a mutation). */
+  applyLocal: (updater: (events: Event[]) => Event[]) => void;
+  /** Re-fetch from Google now (also runs automatically every few minutes). */
+  refresh: () => void;
+  /** Surface a calendar mutation failure in the sync indicator. */
+  reportError: (message: string) => void;
 }
 
 /**
@@ -38,6 +47,8 @@ export function useCalendarSync(range: DateRange): CalendarSync {
   const [enabledOverride, setEnabledOverride] = useState<string[] | null>(null);
   const [syncing, setSyncing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Bumped to force a re-fetch (manual refresh + the periodic interval).
+  const [refreshTick, setRefreshTick] = useState(0);
 
   const enabledCalendarIds = useMemo(
     () => enabledOverride ?? calendars.filter((c) => c.enabled).map((c) => c.id),
@@ -79,7 +90,14 @@ export function useCalendarSync(range: DateRange): CalendarSync {
     })();
     return () => controller.abort();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [hasGoogle, range, enabledOverride]);
+  }, [hasGoogle, range, enabledOverride, refreshTick]);
+
+  // Keep the Life lane fresh without any clicking: refresh every few minutes.
+  useEffect(() => {
+    if (!hasGoogle) return;
+    const timer = setInterval(() => setRefreshTick((t) => t + 1), REFRESH_MS);
+    return () => clearInterval(timer);
+  }, [hasGoogle]);
 
   const toggleCalendar = (id: string, enabled: boolean) =>
     setEnabledOverride(
@@ -90,6 +108,13 @@ export function useCalendarSync(range: DateRange): CalendarSync {
         : enabledCalendarIds.filter((c) => c !== id),
     );
 
+  const applyLocal = useCallback(
+    (updater: (events: Event[]) => Event[]) => setEvents(updater),
+    [],
+  );
+  const refresh = useCallback(() => setRefreshTick((t) => t + 1), []);
+  const reportError = useCallback((message: string) => setError(message), []);
+
   return {
     events,
     calendars,
@@ -98,5 +123,8 @@ export function useCalendarSync(range: DateRange): CalendarSync {
     signedIn: hasGoogle,
     syncing,
     error,
+    applyLocal,
+    refresh,
+    reportError,
   };
 }

@@ -17,8 +17,10 @@ export interface LaneReorder {
   orderedLanes: SwimLane[];
   /** Id of the lane being dragged (for styling), if any. */
   draggingLaneId: string | null;
-  /** The non-Life lane whose registered element contains clientY, if any. */
-  laneAtY: (clientY: number) => { lane: SwimLane; rect: DOMRect } | null;
+  /** The lane whose registered element contains clientY, if any. Life lanes
+   *  are skipped unless `includeLife` (they can't receive cross-lane drops,
+   *  but in-lane GCal drags need their geometry). */
+  laneAtY: (clientY: number, includeLife?: boolean) => { lane: SwimLane; rect: DOMRect } | null;
 }
 
 /**
@@ -48,9 +50,12 @@ export function useLaneReorder(
   const previewOrderRef = useRef<string[] | null>(null);
   previewOrderRef.current = previewOrder;
 
-  const laneAtY = (clientY: number): { lane: SwimLane; rect: DOMRect } | null => {
+  const laneAtY = (
+    clientY: number,
+    includeLife = false,
+  ): { lane: SwimLane; rect: DOMRect } | null => {
     for (const lane of lanes) {
-      if (isLifeLane(lane)) continue;
+      if (!includeLife && isLifeLane(lane)) continue;
       const el = laneRefs.current.get(lane.id);
       if (!el) continue;
       const rect = el.getBoundingClientRect();

@@ -30,6 +30,8 @@ interface SwimLaneProps {
   onToggleSubtask: (subtaskId: string) => void;
   /** False on small screens — the notes column is collapsed entirely. */
   showNotes: boolean;
+  /** Life lane only: allow creating/editing Google Calendar events. */
+  lifeEditable: boolean;
   /** Register this lane's track element for cross-lane drag hit-testing. */
   registerTrack: (laneId: string, el: HTMLElement | null) => void;
   /** Begin a move-drag from an event body (handled by the grid controller). */
@@ -52,6 +54,7 @@ export default function SwimLaneRow({
   subtasks,
   onToggleSubtask,
   showNotes,
+  lifeEditable,
   registerTrack,
   onEventPointerDown,
   draggingId,
@@ -192,10 +195,10 @@ export default function SwimLaneRow({
           trackRef.current = el;
           registerTrack(lane.id, el);
         }}
-        onPointerDown={life ? undefined : beginCreate}
+        onPointerDown={life && !lifeEditable ? undefined : beginCreate}
         className={[
           "group/track relative flex-1 border-b border-neutral-200 dark:border-neutral-800",
-          life ? "" : "cursor-text",
+          life && !lifeEditable ? "" : "cursor-text",
         ].join(" ")}
         style={{
           minHeight: 34,
@@ -237,6 +240,7 @@ export default function SwimLaneRow({
               onCancelEdit={interaction.onCancelEdit}
               onOpenNote={() => interaction.onOpenNote(p.event.id)}
               rowCapPx={effHeight ? Math.max(18, Math.floor((effHeight - 2) / trackCount)) : undefined}
+              gcalEditable={lifeEditable}
               onResizeStart={(edge) => beginResize(p.event, edge)}
               onPointerDownBody={(e) => onEventPointerDown(p.event, e)}
             />
